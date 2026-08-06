@@ -1,7 +1,7 @@
-# M0 regressions
+# Engineering regressions
 
-Six real defects found while building the foundation. None came from reasoning
-about the design — every one surfaced when something was actually run.
+Real defects found while building, not while reasoning about the design. Every
+one surfaced only when something was actually run.
 
 **Each entry names the test that now prevents it.** A regression without a test
 is a note, not a guard; if a test here is ever deleted, the corresponding defect
@@ -143,11 +143,42 @@ not begin with `EF BB BF`, and that the generator uses `writeFileSync`.
 
 ---
 
+## 7. A synchronous Fastify hook hangs the request forever (M1)
+
+`requireAuth` was written as an ordinary synchronous function:
+
+```ts
+export function requireAuth(request: FastifyRequest, _reply: FastifyReply): void {
+  if (!request.user) throw ApiError.unauthenticated();
+}
+```
+
+Fastify decides how to wait for a hook from its **arity**. Three parameters
+means the callback style, and it waits for `done()`. Two parameters means the
+promise style, and it waits for the returned promise to settle. This function
+takes two parameters and returns `undefined`, so Fastify waited for a promise
+that never existed.
+
+Every authenticated request hung until the test timeout. No error, no log line,
+no stack trace — the request simply never completed. The first symptom was 16
+failing tests and a suite that took 57 seconds instead of 7, which points at
+performance rather than at a hook signature.
+
+**Fix**: `requireAuth` and the function returned by `requireRole` are declared
+`async`. The `done` form would also work; async is harder to get subtly wrong,
+because forgetting to call `done()` reproduces exactly this bug.
+
+**Guarded by**: `apps/server/src/identity.test.ts` — every case behind a
+permission check exercises the hooks. Any regression here fails the entire
+authenticated suite rather than one assertion.
+
+---
+
 ## The pattern
 
-Five of the six share one shape: **the system reports success while doing
-nothing**, or reports a fault while working correctly. Nothing crashed, no stack
-trace pointed anywhere useful.
+Six of the seven share one shape: **the system reports success while doing
+nothing**, or reports a fault while working correctly, or simply never answers.
+Nothing crashed, no stack trace pointed anywhere useful.
 
 That is the same failure mode the announcement model is built to eliminate —
 an administrator clicking "request acknowledgement", seeing success, and nobody

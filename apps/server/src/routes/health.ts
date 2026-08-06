@@ -4,7 +4,7 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { APP_VERSION } from "../app.js";
 
 // Fastify's async plugin signature; nothing to await during registration.
-// eslint-disable-next-line @typescript-eslint/require-await
+
 export const healthRoutes: FastifyPluginAsyncTypebox = async (app) => {
   app.get(
     "/health",

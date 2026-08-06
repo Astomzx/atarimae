@@ -1,4 +1,6 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { createSecretStore, type SecretStore } from "@atarimae/secret-store";
@@ -9,7 +11,11 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastif
 import type { Config } from "./config.js";
 import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
+import { registerAuth } from "./plugins/auth.js";
+import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { setupRoutes } from "./routes/setup.js";
+import { userRoutes } from "./routes/users.js";
 
 export const APP_VERSION = "0.0.0";
 
@@ -101,6 +107,29 @@ export async function buildApp({
     credentials: true,
   });
 
+  await app.register(cookie);
+
+  /**
+   * Global ceiling. Individual routes tighten this further via
+   * `config.rateLimit` — sign-in and first-run setup both do, because they
+   * perform Argon2 work on unauthenticated input.
+   */
+  // Skipped entirely under test. `global: false` would not be enough: the
+  // per-route `config.rateLimit` on sign-in and setup still applies, and the
+  // suite signs in dozens of times. Rate limiting gets dedicated coverage in M6.
+  if (config.NODE_ENV !== "test") {
+    await app.register(rateLimit, {
+      global: true,
+      max: 300,
+      timeWindow: "1 minute",
+      // Keyed per authenticated user where possible, so several people behind
+      // one office NAT do not share a single budget.
+      keyGenerator: (request) => request.user?.id ?? request.ip,
+    });
+  }
+
+  await registerAuth(app);
+
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
@@ -116,7 +145,12 @@ export async function buildApp({
         },
       },
       servers: [{ url: "/api/v1", description: "Version 1" }],
-      tags: [{ name: "health", description: "Liveness and readiness." }],
+      tags: [
+        { name: "health", description: "Liveness and readiness." },
+        { name: "setup", description: "First-run initialisation." },
+        { name: "auth", description: "Sign in, sessions, devices." },
+        { name: "users", description: "Members, roles and access." },
+      ],
     },
   });
 
@@ -127,6 +161,9 @@ export async function buildApp({
   await app.register(
     async (api) => {
       await api.register(healthRoutes);
+      await api.register(setupRoutes);
+      await api.register(authRoutes);
+      await api.register(userRoutes);
     },
     { prefix: "/api/v1" },
   );

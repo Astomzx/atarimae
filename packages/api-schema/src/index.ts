@@ -14,3 +14,25 @@ export {
 } from "./common/primitives.js";
 
 export { HealthResponse } from "./health.js";
+
+export {
+  AuthenticatedUser,
+  CreateOwnerRequest,
+  DisplayName,
+  Email,
+  LoginRequest,
+  LoginResponse,
+  Password,
+  Role,
+  SessionSummary,
+  SetupStatusResponse,
+} from "./auth.js";
+
+export {
+  CreateUserRequest,
+  ListUsersQuery,
+  ListUsersResponse,
+  UpdateUserRoleRequest,
+  UserErrorCode,
+  UserSummary,
+} from "./users.js";

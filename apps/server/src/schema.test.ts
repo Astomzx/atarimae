@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "./config.js";
 import { createDatabase, type Database, type DatabaseClient } from "./db.js";
@@ -11,6 +11,19 @@ beforeAll(() => {
 
 afterAll(async () => {
   await db.end();
+});
+
+/**
+ * The owner-retention cases assert on "the last Owner", so any Owner left
+ * behind by another test file would make them pass for the wrong reason.
+ * TRUNCATE does not fire row-level triggers, so emptying users this way is
+ * legitimate even though deleting the last Owner is not.
+ */
+beforeEach(async () => {
+  await db.query(
+    `TRUNCATE audit_logs, sessions, user_devices, invitations,
+              user_org_units, org_units, users RESTART IDENTITY CASCADE`,
+  );
 });
 
 /**

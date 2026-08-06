@@ -46,6 +46,29 @@ export default tseslint.config(
     },
   },
 
+  // Fastify plugins and route modules must match its async plugin signature,
+  // whether or not registration happens to await anything.
+  {
+    files: ["apps/server/src/routes/**/*.ts", "apps/server/src/plugins/**/*.ts"],
+    rules: {
+      "@typescript-eslint/require-await": "off",
+    },
+  },
+
+  // Test files assert on decoded JSON, which is `any` by construction — both
+  // `inject().json()` and `pg`'s row types. Keeping these rules on here would
+  // mean casting every assertion without making anything safer.
+  {
+    files: ["**/*.test.ts", "e2e/**/*.spec.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+
   // Build and test configuration files sit outside their package's tsconfig
   // include, so type-aware rules cannot resolve them.
   {

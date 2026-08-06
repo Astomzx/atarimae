@@ -20,6 +20,14 @@ beforeAll(async () => {
     () => ({ ok: true }),
   );
 
+  // POST counterpart, for the framework-error regressions below.
+  app.post("/__probe", () => ({ ok: true }));
+
+  // Simulates an unhandled fault, to assert nothing internal is disclosed.
+  app.get("/__probe-throws", () => {
+    throw new Error("SELECT * FROM users WHERE secret = 'leaked'");
+  });
+
   await app.ready();
 });
 
@@ -58,16 +66,56 @@ describe("error handling", () => {
     expect(body.requestId).toBeTruthy();
   });
 
-  it("rejects a body that exceeds the limit without crashing", async () => {
+  /**
+   * M0 regression: Fastify raises its own errors for oversized bodies,
+   * unsupported content types and unparseable JSON. Reporting them as 500 both
+   * misleads the client and buries genuine server faults in noise.
+   */
+  it("returns 413 with PAYLOAD_TOO_LARGE for an oversized body", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/health",
+      url: "/__probe",
       headers: { "content-type": "application/json" },
       payload: JSON.stringify({ padding: "x".repeat(2_000_000) }),
     });
 
-    // 404 (no POST route) or 413 (too large) — never a 500.
-    expect([404, 413]).toContain(response.statusCode);
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  });
+
+  it("returns 415 with UNSUPPORTED_MEDIA_TYPE for an unknown content type", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/__probe",
+      headers: { "content-type": "application/x-not-supported" },
+      payload: "whatever",
+    });
+
+    expect(response.statusCode).toBe(415);
+    expect(response.json()).toMatchObject({ code: "UNSUPPORTED_MEDIA_TYPE" });
+  });
+
+  it("returns 400 with VALIDATION_FAILED for malformed JSON", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/__probe",
+      headers: { "content-type": "application/json" },
+      payload: "{ not valid json",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
+  it("never leaks internal detail on an unexpected error", async () => {
+    const response = await app.inject({ method: "GET", url: "/__probe-throws" });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toMatchObject({
+      code: "INTERNAL_ERROR",
+      message: "An internal error occurred.",
+    });
+    expect(response.body).not.toContain("leaked");
   });
 });
 

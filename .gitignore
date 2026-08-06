@@ -1,0 +1,39 @@
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Secrets and local configuration. Never commit these.
+.env
+.env.*
+!.env.example
+
+# Playwright
+playwright-report/
+test-results/
+e2e/.auth/
+blob-report/
+
+# Generated API client artifacts.
+# apps/server/openapi.json is intentionally committed: it is the API contract,
+# and CI fails when it drifts from the route schemas.
+packages/api-schema/generated/
+
+# Local Claude Code settings (per-machine, not shared)
+.claude/settings.local.json
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+Thumbs.db
+Desktop.ini
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local attachment storage during development
+var/
+uploads/

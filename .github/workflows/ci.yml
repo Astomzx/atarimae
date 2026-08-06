@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # PostgreSQL 18 is the floor: uuidv7() and the builtin C.UTF-8 collation
+  # provider both require it. See migrations/*_schema-conventions.sql.
+  POSTGRES_IMAGE: postgres:18-alpine
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atarimae_dev
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atarimae_test
+  ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+jobs:
+  quality:
+    name: Lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate .env
+        run: node scripts/setup-env.mjs
+
+      - name: Prepare databases
+        run: |
+          node scripts/db.mjs reset
+          node scripts/db.mjs reset --test
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build packages
+        run: pnpm -r build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      # Proves every migration has a working Down Migration. A migration that
+      # cannot be rolled back must never reach main.
+      - name: Verify migrations are reversible
+        run: node scripts/db.mjs verify
+
+      # The OpenAPI document is generated from the route schemas. If it drifts,
+      # the committed document and the frontend client types are stale.
+      - name: Check OpenAPI document is current
+        run: |
+          pnpm --filter @atarimae/server openapi
+          if ! git diff --exit-code --stat apps/server/openapi.json; then
+            echo "::error::openapi.json is out of date. Run: pnpm --filter @atarimae/server openapi"
+            exit 1
+          fi
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate .env
+        run: node scripts/setup-env.mjs
+
+      - name: Prepare test database
+        run: node scripts/db.mjs reset --test
+
+      - name: Build packages
+        run: pnpm -r build
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @atarimae/e2e exec playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 14

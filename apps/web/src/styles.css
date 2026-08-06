@@ -1,0 +1,118 @@
+/*
+ * M0 baseline only. The real design system lands with M1.
+ * Mobile-first: the same information structure at every width, per the
+ * project's rule that PC and phone are not two different products.
+ */
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #e2e5ea;
+  --text: #1a1d21;
+  --text-muted: #5c636e;
+  --ok: #127a4a;
+  --error: #b3261e;
+  --radius: 10px;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --surface: #1c1f24;
+    --border: #2c3138;
+    --text: #e8eaed;
+    --text-muted: #9aa2ad;
+    --ok: #4ade80;
+    --error: #f87171;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP",
+    Meiryo,
+    sans-serif;
+  line-height: 1.6;
+}
+
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.shell__title {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: 0.02em;
+}
+
+.shell__subtitle {
+  margin: 0.25rem 0 2rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.card__title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.status-list {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.status-list__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-list__row:last-child {
+  border-bottom: none;
+}
+
+.status-list dt {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.status-list dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.status--ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.status--error {
+  color: var(--error);
+  font-weight: 600;
+}

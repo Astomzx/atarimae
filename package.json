@@ -1,0 +1,49 @@
+{
+  "name": "atarimae",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A free and self-hosted communication board for small teams.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r --filter=!@atarimae/e2e test",
+    "test:e2e": "pnpm --filter @atarimae/e2e test",
+    "db:new": "node scripts/db.mjs new",
+    "db:up": "node scripts/db.mjs up",
+    "db:down": "node scripts/db.mjs down",
+    "db:redo": "node scripts/db.mjs redo",
+    "db:status": "node scripts/db.mjs status",
+    "db:create": "node scripts/db.mjs reset --create-only",
+    "db:reset": "node scripts/db.mjs reset",
+    "db:verify": "node scripts/db.mjs verify",
+    "db:test:reset": "node scripts/db.mjs reset --test",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "prepare": "node -e \"process.exit(0)\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.0",
+    "globals": "^17.9.0",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.22.0",
+    "prettier": "^3.9.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.0"
+  }
+}

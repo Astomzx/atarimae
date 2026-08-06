@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "e2e"
+
+# Dependencies allowed to run install scripts. Everything else is blocked by
+# default, which is what keeps a compromised transitive package from executing
+# arbitrary code during `pnpm install`.
+allowBuilds:
+  esbuild: true

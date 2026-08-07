@@ -45,6 +45,14 @@ export function Layout() {
             <NavLink to="/" end className="nav__link">
               ホーム
             </NavLink>
+            <NavLink to="/my/announcements" className="nav__link">
+              お知らせ
+            </NavLink>
+            {isAdmin && (
+              <NavLink to="/announcements" className="nav__link">
+                公告管理
+              </NavLink>
+            )}
             <NavLink to="/members" className="nav__link">
               メンバー
             </NavLink>

@@ -8,6 +8,14 @@ export function HomePage() {
   const { user } = useSession();
   const health = useQuery({ queryKey: ["health"], queryFn: api.health });
   const members = useQuery({ queryKey: ["users", {}], queryFn: () => api.users.list() });
+  const mine = useQuery({
+    queryKey: ["my-announcements"],
+    queryFn: api.my.announcements,
+  });
+
+  const pending = (mine.data?.items ?? []).filter(
+    (item) => item.requiresAcknowledgement && !item.acknowledgedAt,
+  );
 
   const isAdmin = user ? hasAtLeast(user.role, "admin") : false;
 
@@ -18,12 +26,45 @@ export function HomePage() {
         {user?.displayName} さん（{user ? ROLE_LABEL[user.role] : ""}）
       </p>
 
-      {/* M2 replaces this with announcements requiring acknowledgement. */}
+      {/* The first thing anybody needs to know: what is waiting on them. */}
       <section className="card">
-        <h2 className="card__title">お知らせ</h2>
-        <p className="muted">
-          掲示板機能は M2 で追加されます。現在はアカウントと組織の管理のみ利用できます。
-        </p>
+        <h2 className="card__title">確認が必要なお知らせ</h2>
+
+        {mine.isPending && <p className="muted">読み込み中…</p>}
+
+        {mine.isSuccess && pending.length === 0 && (
+          <p className="muted" data-testid="no-pending">
+            確認が必要なお知らせはありません。
+          </p>
+        )}
+
+        {pending.length > 0 && (
+          <>
+            <p className="stat" data-testid="pending-count">
+              {pending.length}
+              <span className="stat__unit">件</span>
+            </p>
+            <ul className="list list--flush">
+              {pending.slice(0, 3).map((item) => (
+                <li key={item.id} className="list__item">
+                  <span className="list__title">{item.title}</span>
+                  {item.dueAt && (
+                    <span className="list__meta">
+                      期限{" "}
+                      {new Intl.DateTimeFormat("ja-JP", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      }).format(new Date(item.dueAt))}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <Link to="/my/announcements" className="button button--primary">
+              確認する
+            </Link>
+          </>
+        )}
       </section>
 
       <div className="grid">
@@ -45,11 +86,11 @@ export function HomePage() {
               管理者は、営業担当に連絡することなく管理者を追加できます。
             </p>
             <Link
-              to="/members"
+              to="/announcements"
               className="button button--primary"
-              data-testid="home-add-member"
+              data-testid="home-create-announcement"
             >
-              メンバーを追加
+              公告を作成
             </Link>
           </section>
         )}

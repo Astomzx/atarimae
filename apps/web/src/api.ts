@@ -1,15 +1,25 @@
 import type {
+  AcknowledgementStatistics,
+  AnnouncementDetail,
+  AnnouncementSummary,
+  AnnouncementTarget,
   AuthenticatedUser,
+  CommandSummary,
+  CreateAnnouncementRequest,
   CreateOrgUnitRequest,
   CreateOwnerRequest,
   CreateUserRequest,
   ErrorResponse,
   HealthResponse,
   LoginRequest,
+  MyAnnouncement,
   OrgUnit,
+  PublishResponse,
+  ReviseContentRequest,
   Role,
   SessionSummary,
   SetupStatusResponse,
+  SmtpSettingsResponse,
   UserSummary,
 } from "@atarimae/api-schema";
 
@@ -139,6 +149,61 @@ export const api = {
       send<void>("DELETE", `/users/${id}/org-units/${orgUnitId}`),
   },
 
+  announcements: {
+    list: () => request<{ items: AnnouncementSummary[] }>("/announcements"),
+    get: (id: string) => request<AnnouncementDetail>(`/announcements/${id}`),
+    create: (input: CreateAnnouncementRequest) =>
+      send<AnnouncementSummary>("POST", "/announcements", input),
+    revise: (id: string, input: ReviseContentRequest) =>
+      send<AnnouncementSummary>("POST", `/announcements/${id}/content`, input),
+    setTargets: (id: string, targets: AnnouncementTarget[]) =>
+      send<{ targetVersionNo: number; resolvedUserCount: number }>(
+        "PUT",
+        `/announcements/${id}/targets`,
+        { targets },
+      ),
+    setPersonalization: (id: string, userId: string, personalBody: string) =>
+      send<void>("PUT", `/announcements/${id}/personalizations/${userId}`, {
+        personalBody,
+      }),
+    publish: (id: string) =>
+      send<PublishResponse>("POST", `/announcements/${id}/publish`),
+    statistics: (id: string) =>
+      request<AcknowledgementStatistics>(`/announcements/${id}/statistics`),
+    assignObligations: (id: string) =>
+      send<{ summary: CommandSummary }>(
+        "POST",
+        `/announcements/${id}/assign-obligations`,
+        {},
+      ),
+    requestReacknowledgement: (id: string) =>
+      send<{ summary: CommandSummary }>(
+        "POST",
+        `/announcements/${id}/request-reacknowledgement`,
+        {},
+      ),
+  },
+
+  my: {
+    announcements: () => request<{ items: MyAnnouncement[] }>("/my/announcements"),
+    acknowledge: (id: string) =>
+      send<void>("POST", `/my/announcements/${id}/acknowledge`, { clientType: "web" }),
+  },
+
+  settings: {
+    smtp: () => request<SmtpSettingsResponse>("/settings/smtp"),
+    queue: () =>
+      request<{ pending: number; failed: number; abandoned: number }>(
+        "/settings/notification-queue",
+      ),
+    drainQueue: () =>
+      send<{ pending: number; failed: number; abandoned: number }>(
+        "POST",
+        "/settings/notification-queue/drain",
+        {},
+      ),
+  },
+
   orgUnits: {
     list: (includeDisabled = false) =>
       request<{ items: OrgUnit[] }>(
@@ -164,6 +229,15 @@ const MESSAGES: Record<string, string> = {
   ORG_UNIT_NAME_TAKEN: "同じ名前の部署が既に存在します。",
   ORG_UNIT_DISABLED: "停止中の部署にはメンバーを追加できません。",
   ALREADY_ASSIGNED: "このメンバーは既にこの部署に所属しています。",
+  NO_TARGETS: "公開する前に、宛先を1つ以上指定してください。",
+  NO_RESOLVED_RECIPIENTS:
+    "指定した宛先に、有効なメンバーが1人もいません。宛先を確認してください。",
+  ANNOUNCEMENT_ALREADY_PUBLISHED: "この公告は既に公開されています。",
+  ANNOUNCEMENT_NOT_PUBLISHED: "先に公告を公開してください。",
+  ANNOUNCEMENT_ARCHIVED: "この公告はアーカイブ済みのため変更できません。",
+  NO_ELIGIBLE_RECIPIENTS: "この操作の対象となるメンバーがいませんでした。",
+  NOT_A_RECIPIENT: "この公告はあなたに宛てられていません。",
+  SMTP_NOT_CONFIGURED: "メール送信の設定がまだ行われていません。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

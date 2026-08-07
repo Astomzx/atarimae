@@ -522,3 +522,134 @@ body {
   padding: 0.35rem 0.5rem;
   font-size: 0.85rem;
 }
+
+.alert--info {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+}
+
+/* -------------------------------------------------------- announcements -- */
+
+.section__title {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.announcement__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The paragraph written for this reader alone. Visually separated because
+ * mistaking somebody else's instructions for your own is the expensive error
+ * this feature exists to prevent.
+ */
+.announcement__personal {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-alt);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.announcement__personal-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.announcement__personal-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.announcement__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.field__input--multiline {
+  resize: vertical;
+  min-height: 6rem;
+  font-family: inherit;
+}
+
+.list--flush {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  margin-top: 0.5rem;
+}
+
+.list--flush .list__item {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.list__actions--grow {
+  flex: 1 1 18rem;
+}
+
+.list__actions--grow .field__input {
+  flex: 1;
+}
+
+/* Target selection: one tap per department, same at every width. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.chip:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+
+.chip--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.badge--draft {
+  border-color: var(--text-muted);
+}
+
+.badge--published {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.badge--archived {
+  border-color: var(--border);
+}

@@ -2,7 +2,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { FullPageMessage, RequireAuth, useSetupStatus } from "./auth.js";
 import { Layout } from "./components/Layout.js";
+import { AnnouncementDetailPage } from "./pages/AnnouncementDetail.js";
+import { AnnouncementsPage } from "./pages/Announcements.js";
 import { HomePage } from "./pages/Home.js";
+import { MyAnnouncementsPage } from "./pages/MyAnnouncements.js";
 import { LoginPage } from "./pages/Login.js";
 import { MembersPage } from "./pages/Members.js";
 import { OrgUnitsPage } from "./pages/OrgUnits.js";
@@ -48,6 +51,23 @@ export function App() {
         }
       >
         <Route path="/" element={<HomePage />} />
+        <Route path="/my/announcements" element={<MyAnnouncementsPage />} />
+        <Route
+          path="/announcements"
+          element={
+            <RequireAuth minimum="admin">
+              <AnnouncementsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/announcements/:announcementId"
+          element={
+            <RequireAuth minimum="admin">
+              <AnnouncementDetailPage />
+            </RequireAuth>
+          }
+        />
         <Route path="/members" element={<MembersPage />} />
         <Route
           path="/org-units"

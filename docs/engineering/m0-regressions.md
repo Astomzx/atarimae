@@ -174,11 +174,74 @@ authenticated suite rather than one assertion.
 
 ---
 
+## 8. A JSON content-type on every request, including those with no body (M1)
+
+The browser API client set one header unconditionally:
+
+```ts
+headers: { "content-type": "application/json", ...init?.headers }
+```
+
+Fastify rejects a request that declares a JSON body and then sends nothing:
+
+```
+400  Body cannot be empty when content-type is set to 'application/json'
+```
+
+So **every write with no request body was broken**: sign-out, disable user,
+restore user, disable unit, restore unit, revoke session, remove from unit.
+
+96 server tests and 30 E2E tests were green throughout. None of them went
+through this code — the server tests use `inject`, and the E2E suite used
+Playwright's own request context. The client had no coverage at all.
+
+It surfaced by clicking sign-out in a browser and noticing the page did not
+change.
+
+**Fix**: set `content-type` only when there is a body.
+
+**Guarded by**: `e2e/tests/m1-ui.spec.ts` — drives the real interface with real
+client code, and deliberately covers the empty-bodied writes (sign-out, disable,
+restore) rather than only the ones that send JSON.
+
+---
+
+## 9. Sign-out that left the previous user on screen (M1)
+
+Even once the request succeeded, sign-out did this:
+
+```ts
+queryClient.clear();
+navigate("/login", { replace: true });
+```
+
+Clearing the cache does not unmount anything, so components kept their last
+render: the previous user's name, role and the full member list stayed visible
+after the session cookie was gone. It looked exactly like a failed sign-out.
+
+There is a second reason not to do it this way. On a shared machine, a
+client-side navigation leaves the previous user's data in memory for whoever
+sits down next.
+
+**Fix**: `window.location.assign("/login")` — a full page load, in `onSettled`
+so it happens whether or not the request succeeded.
+
+**Guarded by**: `e2e/tests/m1-ui.spec.ts` — asserts after sign-out that
+`/auth/me` returns 401 _and_ that a protected route renders the sign-in screen
+rather than stale content.
+
+---
+
 ## The pattern
 
-Six of the seven share one shape: **the system reports success while doing
+Eight of the nine share one shape: **the system reports success while doing
 nothing**, or reports a fault while working correctly, or simply never answers.
 Nothing crashed, no stack trace pointed anywhere useful.
+
+Number 8 adds a second lesson: **a layer with no tests is a layer with no
+evidence**, however green everything around it is. The server was thoroughly
+covered and entirely correct; the twenty lines of fetch wrapper between it and
+the user were not covered at all, and that is where the product broke.
 
 That is the same failure mode the announcement model is built to eliminate —
 an administrator clicking "request acknowledgement", seeing success, and nobody

@@ -20,8 +20,11 @@ blob-report/
 # and CI fails when it drifts from the route schemas.
 packages/api-schema/generated/
 
-# Local Claude Code settings (per-machine, not shared)
+# Local Claude Code settings (per-machine, not shared).
+# launch.json holds absolute paths to this machine's toolchain, including the
+# Windows username — it must not reach a public repository.
 .claude/settings.local.json
+.claude/launch.json
 
 # Editors and OS
 .vscode/*

@@ -1,21 +1,37 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * M0 smoke test.
+ * Smoke test.
  *
  * Small, but it proves the whole chain is wired: browser -> Vite -> proxy ->
- * Fastify -> PostgreSQL, at both desktop and phone widths. Every later
- * acceptance scenario builds on this being true.
+ * Fastify -> PostgreSQL, at both desktop and phone widths.
+ *
+ * Deliberately makes no assumption about whether the organisation has been
+ * initialised — other specs reset the database, and this one must pass either
+ * way. It asserts only what is true in both cases.
  */
 
-test("the shell renders and reports a healthy system", async ({ page }) => {
+test("an unauthenticated visitor reaches an entry screen, never the app", async ({
+  page,
+}) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Atarimae", level: 1 })).toBeVisible();
 
-  // Resolves once the health query settles.
-  await expect(page.getByTestId("health-status")).toHaveText("正常");
-  await expect(page.getByTestId("health-database")).toHaveText("接続済み");
+  // Either first-run setup or sign-in, depending on whether an Owner exists.
+  // What must never happen is the application shell rendering without a session.
+  const entry = page.getByTestId("setup-submit").or(page.getByTestId("login-submit"));
+  await expect(entry).toBeVisible();
+
+  await expect(page.getByTestId("current-user")).toHaveCount(0);
+});
+
+test("protected routes are not reachable without a session", async ({ page }) => {
+  await page.goto("/members");
+
+  const entry = page.getByTestId("setup-submit").or(page.getByTestId("login-submit"));
+  await expect(entry).toBeVisible();
+  await expect(page.getByTestId("member-list")).toHaveCount(0);
 });
 
 test("the API answers directly", async ({ request }) => {

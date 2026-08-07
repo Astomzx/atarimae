@@ -1,63 +1,66 @@
-import { useQuery } from "@tanstack/react-query";
+import { Navigate, Route, Routes } from "react-router-dom";
 
-import { api } from "./api.js";
+import { FullPageMessage, RequireAuth, useSetupStatus } from "./auth.js";
+import { Layout } from "./components/Layout.js";
+import { HomePage } from "./pages/Home.js";
+import { LoginPage } from "./pages/Login.js";
+import { MembersPage } from "./pages/Members.js";
+import { OrgUnitsPage } from "./pages/OrgUnits.js";
+import { SessionsPage } from "./pages/Sessions.js";
+import { SetupPage } from "./pages/Setup.js";
 
-/**
- * M0 placeholder. Exists so the toolchain is proven end to end: the browser
- * reaches Vite, Vite proxies to Fastify, Fastify reaches PostgreSQL, and
- * Playwright can assert on the result.
- */
 export function App() {
-  const health = useQuery({ queryKey: ["health"], queryFn: api.health });
+  const status = useSetupStatus();
+
+  if (status.isPending) return <FullPageMessage>読み込み中…</FullPageMessage>;
+
+  if (status.isError) {
+    return (
+      <FullPageMessage>
+        <h1 className="page__title">サーバーに接続できません</h1>
+        <p className="muted">
+          しばらくしてから再読み込みしてください。問題が続く場合は管理者にお問い合わせください。
+        </p>
+      </FullPageMessage>
+    );
+  }
+
+  // An organisation with no Owner has exactly one thing it can do.
+  if (!status.data?.initialized) {
+    return (
+      <Routes>
+        <Route path="/setup" element={<SetupPage />} />
+        <Route path="*" element={<Navigate to="/setup" replace />} />
+      </Routes>
+    );
+  }
 
   return (
-    <main className="shell">
-      <header className="shell__header">
-        <h1 className="shell__title">Atarimae</h1>
-        <p className="shell__subtitle">当たり前のことが、当たり前にできる社内掲示板。</p>
-      </header>
+    <Routes>
+      <Route path="/setup" element={<Navigate to="/" replace />} />
+      <Route path="/login" element={<LoginPage />} />
 
-      <section className="card" aria-labelledby="status-heading">
-        <h2 id="status-heading" className="card__title">
-          システム状態
-        </h2>
+      <Route
+        element={
+          <RequireAuth>
+            <Layout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/" element={<HomePage />} />
+        <Route path="/members" element={<MembersPage />} />
+        <Route
+          path="/org-units"
+          element={
+            <RequireAuth minimum="admin">
+              <OrgUnitsPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/sessions" element={<SessionsPage />} />
+      </Route>
 
-        {health.isPending && <p data-testid="health-status">確認中…</p>}
-
-        {health.isError && (
-          <p data-testid="health-status" className="status status--error">
-            サーバーに接続できません
-          </p>
-        )}
-
-        {health.isSuccess && (
-          <dl className="status-list">
-            <div className="status-list__row">
-              <dt>サーバー</dt>
-              <dd data-testid="health-status" className="status status--ok">
-                正常
-              </dd>
-            </div>
-            <div className="status-list__row">
-              <dt>データベース</dt>
-              <dd
-                data-testid="health-database"
-                className={
-                  health.data.checks.database === "ok"
-                    ? "status status--ok"
-                    : "status status--error"
-                }
-              >
-                {health.data.checks.database === "ok" ? "接続済み" : "エラー"}
-              </dd>
-            </div>
-            <div className="status-list__row">
-              <dt>バージョン</dt>
-              <dd data-testid="health-version">{health.data.version}</dd>
-            </div>
-          </dl>
-        )}
-      </section>
-    </main>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

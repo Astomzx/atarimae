@@ -32,9 +32,13 @@ if (!existsSync(EXAMPLE)) {
 
 const key = () => randomBytes(32).toString("base64");
 
+/** URL-safe, so it can go straight into a connection string. */
+const password = () => randomBytes(24).toString("base64url");
+
 const filled = readFileSync(EXAMPLE, "utf8")
   .replace(/^ENCRYPTION_KEY_CURRENT=.*$/m, `ENCRYPTION_KEY_CURRENT=key01:${key()}`)
-  .replace(/^SESSION_SECRET=.*$/m, `SESSION_SECRET=${key()}`);
+  .replace(/^SESSION_SECRET=.*$/m, `SESSION_SECRET=${key()}`)
+  .replace(/^POSTGRES_PASSWORD=.*$/m, `POSTGRES_PASSWORD=${password()}`);
 
 writeFileSync(TARGET, filled, { encoding: "utf8" });
 

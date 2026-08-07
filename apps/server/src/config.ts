@@ -32,6 +32,13 @@ const ConfigSchema = Type.Object({
 
   SESSION_SECRET: Type.String({ minLength: 32 }),
 
+  /**
+   * Directory of the built web client. Set in the container image, where one
+   * process serves both the API and the interface; unset in development, where
+   * Vite serves the client and proxies the API.
+   */
+  WEB_DIST_PATH: Type.Optional(Type.String()),
+
   LOG_LEVEL: Type.Union(
     [
       Type.Literal("trace"),
@@ -59,6 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ENCRYPTION_KEY_CURRENT: env["ENCRYPTION_KEY_CURRENT"],
     ENCRYPTION_KEY_PREVIOUS: env["ENCRYPTION_KEY_PREVIOUS"],
     SESSION_SECRET: env["SESSION_SECRET"],
+    WEB_DIST_PATH: env["WEB_DIST_PATH"],
     LOG_LEVEL: env["LOG_LEVEL"],
   });
 

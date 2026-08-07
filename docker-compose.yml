@@ -1,0 +1,65 @@
+# Atarimae — self-hosted deployment.
+#
+#   node scripts/setup-env.mjs        # writes .env with real secrets
+#   $EDITOR .env                      # set PUBLIC_ORIGIN
+#   docker compose up -d
+#   docker compose exec app node scripts/db.mjs up
+#
+# Then open http://localhost:3000 and create the first Owner.
+
+services:
+  db:
+    # PostgreSQL 18 is a hard requirement: uuidv7() and the builtin C.UTF-8
+    # collation provider. An older image will fail the first migration with an
+    # explicit message rather than misbehaving quietly.
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-atarimae}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-atarimae}
+      # Matches what scripts/db.mjs creates locally, so development and
+      # production agree on ORDER BY and unique index behaviour.
+      POSTGRES_INITDB_ARGS: "--locale-provider=builtin --builtin-locale=C.UTF-8 --encoding=UTF8"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atarimae}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published to the host by default. Nothing outside this network needs
+    # to reach the database.
+    expose:
+      - "5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-atarimae}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-atarimae}
+
+      # The address people type into a browser. Used for CORS and for the links
+      # inside notification emails, so getting it wrong produces mail nobody
+      # can act on.
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+
+      # LOSING THIS KEY PERMANENTLY DESTROYS every stored external credential
+      # (the SMTP password). Back it up alongside — but never inside — your
+      # database dumps.
+      ENCRYPTION_KEY_CURRENT: ${ENCRYPTION_KEY_CURRENT:?ENCRYPTION_KEY_CURRENT is required}
+      ENCRYPTION_KEY_PREVIOUS: ${ENCRYPTION_KEY_PREVIOUS:-}
+
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+volumes:
+  db-data:

@@ -26,16 +26,29 @@ const MIGRATIONS_DIR = join(ROOT, "migrations");
 // Environment
 // ---------------------------------------------------------------------------
 
+/**
+ * Loads .env when present, and otherwise trusts the ambient environment.
+ *
+ * A container has no .env file — its configuration arrives as real environment
+ * variables — so insisting on the file would make `docker compose exec app
+ * node scripts/db.mjs up` impossible, which is the documented way to run
+ * migrations on a deployment.
+ */
 function loadEnv() {
   const envPath = join(ROOT, ".env");
-  if (!existsSync(envPath)) {
-    fail(
-      "No .env file found.\n\n" +
-        "  cp .env.example .env\n\n" +
-        "Then edit it so DATABASE_URL points at your local PostgreSQL.",
-    );
+
+  if (existsSync(envPath)) {
+    process.loadEnvFile(envPath);
+    return;
   }
-  process.loadEnvFile(envPath);
+
+  if (process.env.DATABASE_URL) return;
+
+  fail(
+    "No .env file, and DATABASE_URL is not set.\n\n" +
+      "  node scripts/setup-env.mjs\n\n" +
+      "Then check DATABASE_URL points at your PostgreSQL.",
+  );
 }
 
 /** Returns the connection string for the target database. */
@@ -46,9 +59,20 @@ function targetUrl(useTest) {
   return url;
 }
 
+/**
+ * Only needed by reset/verify, which create and drop databases. A deployment
+ * never does either — its database already exists — so this stays optional
+ * rather than blocking `db:up` in a container.
+ */
 function adminUrl() {
   const url = process.env.ADMIN_DATABASE_URL;
-  if (!url) fail("ADMIN_DATABASE_URL is not set in .env");
+  if (!url) {
+    fail(
+      "ADMIN_DATABASE_URL is not set.\n\n" +
+        "It is only required for creating or dropping databases. On a\n" +
+        "deployment, the database already exists — use `db:up` instead.",
+    );
+  }
   return url;
 }
 

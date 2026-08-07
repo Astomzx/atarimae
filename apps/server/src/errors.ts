@@ -59,7 +59,22 @@ const STATUS_TO_CODE: Record<number, string> = {
   429: CommonErrorCode.TOO_MANY_REQUESTS,
 };
 
-export function registerErrorHandler(app: FastifyInstance): void {
+export interface ErrorHandlerOptions {
+  /**
+   * Serve index.html for unmatched GETs, for client-side routing.
+   *
+   * Fastify permits exactly one not-found handler per prefix, so this has to
+   * be a parameter here rather than a second `setNotFoundHandler` next to the
+   * static plugin — registering twice throws at startup and the process never
+   * comes up.
+   */
+  spaFallback?: boolean;
+}
+
+export function registerErrorHandler(
+  app: FastifyInstance,
+  options: ErrorHandlerOptions = {},
+): void {
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const requestId = request.id;
 
@@ -113,6 +128,22 @@ export function registerErrorHandler(app: FastifyInstance): void {
   });
 
   app.setNotFoundHandler((request, reply) => {
+    // A hard refresh on /members must return the application, not a 404. Only
+    // for GETs outside /api, so a mistyped endpoint still answers with the
+    // shared error shape rather than a page of HTML.
+    if (
+      options.spaFallback &&
+      request.method === "GET" &&
+      !request.url.startsWith("/api/")
+    ) {
+      // cacheControl: false so the static plugin's immutable header does not
+      // overwrite this one — a cached index.html strands browsers on the
+      // previous build after a deploy.
+      return reply
+        .header("cache-control", "no-cache")
+        .sendFile("index.html", { cacheControl: false });
+    }
+
     return reply.status(404).send({
       code: CommonErrorCode.NOT_FOUND,
       message: `Route ${request.method} ${request.url} not found.`,

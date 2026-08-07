@@ -1,6 +1,7 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import fastifyStatic from "@fastify/static";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { createSecretStore, type SecretStore } from "@atarimae/secret-store";
@@ -113,7 +114,7 @@ export async function buildApp({
     }),
   );
 
-  registerErrorHandler(app);
+  registerErrorHandler(app, { spaFallback: config.WEB_DIST_PATH !== undefined });
 
   await app.register(cors, {
     origin: config.PUBLIC_ORIGIN,
@@ -197,6 +198,39 @@ export async function buildApp({
     },
     { prefix: "/api/v1" },
   );
+
+  /**
+   * In a container, one process serves both the API and the interface — no
+   * separate web server to configure, which is the point of a deployment a
+   * small office can actually run.
+   *
+   * Registered after the API routes so nothing here can shadow /api/v1.
+   */
+  if (config.WEB_DIST_PATH) {
+    await app.register(fastifyStatic, {
+      root: config.WEB_DIST_PATH,
+      // Hashed asset filenames may be cached indefinitely; index.html must not
+      // be, or a deploy leaves browsers on the previous build.
+      maxAge: "1y",
+      immutable: true,
+      // Not served automatically: index.html must not inherit the immutable
+      // cache header above, or a deploy leaves browsers on the previous build.
+      index: false,
+    });
+
+    // With index: false the static plugin answers "/" with 403 rather than
+    // falling through, so the root needs its own route.
+    // `cacheControl: false` stops the static plugin applying the immutable
+    // header above; without it sendFile overwrites whatever is set here.
+    app.get("/", (_request, reply) =>
+      reply
+        .header("cache-control", "no-cache")
+        .sendFile("index.html", { cacheControl: false }),
+    );
+
+    // Every other client-side route is handled by the not-found handler —
+    // Fastify allows only one per prefix, so it cannot be registered here.
+  }
 
   // Not under test: the suite drives drainOutbox directly, and a timer firing
   // mid-assertion would make outbox counts nondeterministic.

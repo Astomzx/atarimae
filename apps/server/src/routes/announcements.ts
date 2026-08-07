@@ -4,22 +4,32 @@ import {
   AnnouncementDetail,
   AnnouncementErrorCode,
   AnnouncementSummary,
+  AssignObligationsRequest,
+  CommandResponse,
+  type CommandSummary,
   CreateAnnouncementRequest,
   errorResponses,
   ListAnnouncementsResponse,
   ListMyAnnouncementsResponse,
   PublishResponse,
+  RequestReacknowledgementRequest,
   ReviseContentRequest,
   SetPersonalizationRequest,
   SetTargetsRequest,
   SetTargetsResponse,
   Uuid,
+  WaiveObligationsRequest,
 } from "@atarimae/api-schema";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 
 import { withTransaction, type DatabaseClient } from "../db.js";
 import { ApiError } from "../errors.js";
+import {
+  assignObligations,
+  requestReacknowledgement,
+  waiveObligations,
+} from "../services/obligations.js";
 import { publishAnnouncement } from "../services/publish.js";
 import { countTargetUsers } from "../services/targets.js";
 import { requireAuth, requireRole } from "../plugins/auth.js";
@@ -508,6 +518,206 @@ export const announcementRoutes: FastifyPluginAsyncTypebox = async (app) => {
         obligations: result.published.obligations,
         notificationsQueued: result.published.notificationsQueued,
       };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Obligation commands
+  // -------------------------------------------------------------------------
+
+  /**
+   * Obligations may only ever bind the *published* body. Taking "the latest
+   * revision" would be wrong — the newest row may still be an unreleased
+   * draft, and demanding acknowledgement of text nobody has released is worse
+   * than refusing.
+   */
+  async function requirePublished(client: DatabaseClient, announcementId: string) {
+    const row = await loadAnnouncement(client, announcementId);
+    assertMutable(row);
+
+    if (!row.current_published_content_revision_id) {
+      throw new ApiError(
+        422,
+        AnnouncementErrorCode.ANNOUNCEMENT_NOT_PUBLISHED,
+        "Publish this announcement before assigning acknowledgement.",
+      );
+    }
+
+    return {
+      contentRevisionId: row.current_published_content_revision_id,
+      announcementDueAt: row.acknowledgement_due_at,
+    };
+  }
+
+  /**
+   * A command an administrator explicitly ran that affected nobody is a
+   * failure, not a success. Returning 200 with a zero count is exactly the
+   * silent outcome this product exists to argue against: the interface says
+   * "acknowledgement requested", the rate reads 0/0, and it looks like a
+   * normal empty state.
+   */
+  function assertAffectedSomeone(summary: CommandSummary): CommandSummary {
+    if (summary.createdCount === 0) {
+      throw new ApiError(
+        422,
+        AnnouncementErrorCode.NO_ELIGIBLE_RECIPIENTS,
+        "No recipients matched the conditions for this operation.",
+        { ...summary },
+      );
+    }
+    return summary;
+  }
+
+  app.post(
+    "/announcements/:announcementId/assign-obligations",
+    {
+      preHandler: requireRole("admin"),
+      schema: {
+        tags: ["announcements"],
+        summary: "Ask recipients who have no obligation to acknowledge",
+        description:
+          "For people who currently hold none: an announcement published " +
+          "without acknowledgement that now needs it, recipients added by a " +
+          "target change, or somebody re-enabled after being disabled. " +
+          "Complementary to request-reacknowledgement, which only reaches " +
+          "people who already hold a live obligation.",
+        params: Type.Object({ announcementId: Uuid }),
+        body: AssignObligationsRequest,
+        response: { 200: CommandResponse, ...errorResponses },
+      },
+    },
+    async (request) => {
+      const actor = request.user!;
+      const { announcementId } = request.params;
+      const { userId } = request.body;
+
+      const summary = await withTransaction(app.db, async (client) => {
+        const published = await requirePublished(client, announcementId);
+
+        const result = await assignObligations(client, {
+          announcementId,
+          contentRevisionId: published.contentRevisionId,
+          announcementDueAt: published.announcementDueAt,
+          operation: userId ? "manual_assignment" : "initial_assignment",
+          ...(userId ? { onlyUserId: userId } : {}),
+        });
+
+        assertAffectedSomeone(result);
+
+        await client.query(
+          `INSERT INTO announcement_events
+             (announcement_id, event_type, actor_user_id, subject_user_id, metadata)
+           VALUES ($1, 'obligations_assigned', $2, $3, $4::jsonb)`,
+          [announcementId, actor.id, userId ?? null, JSON.stringify(result)],
+        );
+
+        return result;
+      });
+
+      return { summary };
+    },
+  );
+
+  app.post(
+    "/announcements/:announcementId/request-reacknowledgement",
+    {
+      preHandler: requireRole("admin"),
+      schema: {
+        tags: ["announcements"],
+        summary: "Ask people to confirm again after a significant change",
+        description:
+          "Supersedes each live obligation and creates a successor bound to " +
+          "the current content. Deliberately unreachable for anyone whose " +
+          "obligation was waived, whose account is disabled, or who never had " +
+          "one — dragging a disabled former employee back into the denominator " +
+          "would leave it permanently unreachable, since they cannot sign in.",
+        params: Type.Object({ announcementId: Uuid }),
+        body: RequestReacknowledgementRequest,
+        response: { 200: CommandResponse, ...errorResponses },
+      },
+    },
+    async (request) => {
+      const actor = request.user!;
+      const { announcementId } = request.params;
+      const { userId } = request.body;
+
+      const summary = await withTransaction(app.db, async (client) => {
+        const published = await requirePublished(client, announcementId);
+
+        const result = await requestReacknowledgement(client, {
+          announcementId,
+          contentRevisionId: published.contentRevisionId,
+          announcementDueAt: published.announcementDueAt,
+          operation: userId ? "personal_reacknowledgement" : "content_reacknowledgement",
+          ...(userId ? { onlyUserId: userId } : {}),
+        });
+
+        assertAffectedSomeone(result);
+
+        await client.query(
+          `INSERT INTO announcement_events
+             (announcement_id, event_type, actor_user_id, subject_user_id, metadata)
+           VALUES ($1, 'reacknowledgement_requested', $2, $3, $4::jsonb)`,
+          [announcementId, actor.id, userId ?? null, JSON.stringify(result)],
+        );
+
+        return result;
+      });
+
+      return { summary };
+    },
+  );
+
+  app.post(
+    "/announcements/:announcementId/waive-obligations",
+    {
+      preHandler: requireRole("admin"),
+      schema: {
+        tags: ["announcements"],
+        summary: "Release people from an outstanding acknowledgement",
+        description:
+          "Only touches obligations nobody has acknowledged yet. An " +
+          "acknowledgement is a fact that already happened; letting a later " +
+          "administrative action erase it would make every reported figure " +
+          "unfalsifiable. A reason is required.",
+        params: Type.Object({ announcementId: Uuid }),
+        body: WaiveObligationsRequest,
+        response: { 200: CommandResponse, ...errorResponses },
+      },
+    },
+    async (request) => {
+      const actor = request.user!;
+      const { announcementId } = request.params;
+      const { reason, userId } = request.body;
+
+      const summary = await withTransaction(app.db, async (client) => {
+        const row = await loadAnnouncement(client, announcementId);
+        assertMutable(row);
+
+        const result = await waiveObligations(client, {
+          announcementId,
+          reason,
+          ...(userId ? { onlyUserId: userId } : {}),
+        });
+
+        assertAffectedSomeone(result);
+
+        await client.query(
+          `INSERT INTO announcement_events
+             (announcement_id, event_type, actor_user_id, subject_user_id, metadata)
+           VALUES ($1, 'obligations_waived', $2, $3, $4::jsonb)`,
+          [
+            announcementId,
+            actor.id,
+            userId ?? null,
+            JSON.stringify({ ...result, reason }),
+          ],
+        );
+
+        return result;
+      });
+
+      return { summary };
     },
   );
 

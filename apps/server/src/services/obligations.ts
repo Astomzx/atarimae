@@ -151,6 +151,8 @@ export interface AssignInput {
   contentRevisionId: string;
   announcementDueAt: string | null;
   operation: OperationKind;
+  /** Restricts to one person, e.g. re-assigning after a restore. */
+  onlyUserId?: string;
 }
 
 /**
@@ -172,6 +174,8 @@ export async function assignObligations(
   );
 
   for (const candidate of await candidates(client, input.announcementId)) {
+    if (input.onlyUserId && candidate.user_id !== input.onlyUserId) continue;
+
     if (candidate.live_obligation_id) {
       summary.skippedExistingActiveCount += 1;
       continue;
@@ -277,6 +281,44 @@ export async function requestReacknowledgement(
   }
 
   return summary;
+}
+
+/**
+ * Waives every outstanding obligation a person holds, across all announcements.
+ *
+ * Called when an account is disabled. A disabled person cannot sign in, so
+ * leaving their obligations live would pin every affected announcement below
+ * 100% forever, with no way to reach it.
+ *
+ * Acknowledged obligations are deliberately untouched: the person really did
+ * confirm, and that does not stop being true because they later left. Their
+ * acknowledgement keeps counting in both the numerator and the denominator.
+ *
+ * Restoring the account does **not** undo this. Re-arming somebody has to be
+ * an explicit, separately audited decision — otherwise re-enabling an account
+ * would silently drop a pile of stale tasks on them and move historical
+ * statistics with no record of why.
+ */
+export async function waiveObligationsForUser(
+  client: DatabaseClient,
+  userId: string,
+  reason = "user_disabled",
+): Promise<number> {
+  const { rowCount } = await client.query(
+    `UPDATE announcement_ack_obligations o
+        SET waived_at = now(), waived_reason = $2
+       FROM announcement_recipients r
+      WHERE o.recipient_id = r.id
+        AND r.user_id = $1
+        AND o.waived_at IS NULL
+        AND o.superseded_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM announcement_acknowledgements a
+           WHERE a.obligation_id = o.id
+        )`,
+    [userId, reason],
+  );
+  return rowCount ?? 0;
 }
 
 /**

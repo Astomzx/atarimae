@@ -15,6 +15,7 @@ import { withTransaction, type DatabaseClient } from "../db.js";
 import { ApiError } from "../errors.js";
 import { AuditAction, writeAudit, writeAuditBestEffort } from "../lib/audit.js";
 import { hashPassword } from "../lib/password.js";
+import { waiveObligationsForUser } from "../services/obligations.js";
 import { requireAuth, requireRole } from "../plugins/auth.js";
 
 interface UserRow {
@@ -333,11 +334,17 @@ export const userRoutes: FastifyPluginAsyncTypebox = async (app) => {
           [userId],
         );
 
+        // Somebody who cannot sign in must not stay in an acknowledgement
+        // denominator — every affected announcement would sit below 100%
+        // permanently. Already-completed acknowledgements are left alone.
+        const waived = await waiveObligationsForUser(client, userId);
+
         await writeAudit(client, request, {
           action: AuditAction.USER_DISABLED,
           actorUserId: actor.id,
           resourceType: "user",
           resourceId: userId,
+          metadata: { obligationsWaived: waived },
         });
 
         return (await fetchUser(client, userId))!;

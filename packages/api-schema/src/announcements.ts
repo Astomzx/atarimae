@@ -204,6 +204,51 @@ export const CommandSummary = Type.Object(
 );
 export type CommandSummary = Static<typeof CommandSummary>;
 
+/**
+ * Give a first obligation to recipients who currently hold none.
+ *
+ * Complementary to re-acknowledgement, which targets people who *do* hold one.
+ * The two filters do not overlap, and confusing them is how an administrator
+ * ends up clicking a button that affects nobody.
+ */
+export const AssignObligationsRequest = Type.Object(
+  {
+    /** Restrict to one person. Omit to cover every eligible recipient. */
+    userId: Type.Optional(Uuid),
+  },
+  { $id: "AssignObligationsRequest" },
+);
+export type AssignObligationsRequest = Static<typeof AssignObligationsRequest>;
+
+export const RequestReacknowledgementRequest = Type.Object(
+  {
+    userId: Type.Optional(Uuid),
+  },
+  { $id: "RequestReacknowledgementRequest" },
+);
+export type RequestReacknowledgementRequest = Static<
+  typeof RequestReacknowledgementRequest
+>;
+
+export const WaiveObligationsRequest = Type.Object(
+  {
+    /**
+     * Mandatory. An unexplained waive is useless when somebody later asks why
+     * the denominator moved, so the database refuses one without a reason.
+     */
+    reason: Type.String({ minLength: 1, maxLength: 200 }),
+    userId: Type.Optional(Uuid),
+  },
+  { $id: "WaiveObligationsRequest" },
+);
+export type WaiveObligationsRequest = Static<typeof WaiveObligationsRequest>;
+
+export const CommandResponse = Type.Object(
+  { summary: CommandSummary },
+  { $id: "CommandResponse" },
+);
+export type CommandResponse = Static<typeof CommandResponse>;
+
 export const PublishResponse = Type.Object(
   {
     announcement: AnnouncementSummary,

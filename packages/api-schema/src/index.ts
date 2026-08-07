@@ -16,6 +16,14 @@ export {
 export { HealthResponse } from "./health.js";
 
 export {
+  NotificationQueueStatus,
+  SettingsErrorCode,
+  SmtpSettingsResponse,
+  SmtpTestResponse,
+  UpdateSmtpSettingsRequest,
+} from "./settings.js";
+
+export {
   AuthenticatedUser,
   CreateOwnerRequest,
   DisplayName,

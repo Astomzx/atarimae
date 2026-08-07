@@ -16,6 +16,8 @@ import { announcementRoutes } from "./routes/announcements.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { orgUnitRoutes } from "./routes/org-units.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { startNotificationWorker } from "./services/worker-loop.js";
 import { setupRoutes } from "./routes/setup.js";
 import { userRoutes } from "./routes/users.js";
 
@@ -169,6 +171,10 @@ export async function buildApp({
           description:
             "Authoring, publishing, acknowledgement and statistics you can explain.",
         },
+        {
+          name: "settings",
+          description: "SMTP and the notification queue.",
+        },
       ],
     },
   });
@@ -185,9 +191,19 @@ export async function buildApp({
       await api.register(userRoutes);
       await api.register(orgUnitRoutes);
       await api.register(announcementRoutes);
+      await api.register(settingsRoutes);
     },
     { prefix: "/api/v1" },
   );
+
+  // Not under test: the suite drives drainOutbox directly, and a timer firing
+  // mid-assertion would make outbox counts nondeterministic.
+  if (config.NODE_ENV !== "test") {
+    const stopWorker = startNotificationWorker(app);
+    app.addHook("onClose", () => {
+      stopWorker();
+    });
+  }
 
   app.addHook("onClose", async (instance) => {
     await instance.db.end();

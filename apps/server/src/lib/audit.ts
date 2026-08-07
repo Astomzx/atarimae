@@ -23,6 +23,8 @@ export const AuditAction = {
   USER_DISABLED: "user.disabled",
   USER_RESTORED: "user.restored",
 
+  SMTP_CONFIGURED: "settings.smtp_configured",
+
   ORG_UNIT_CREATED: "org_unit.created",
   ORG_UNIT_UPDATED: "org_unit.updated",
   ORG_UNIT_DISABLED: "org_unit.disabled",

@@ -13,8 +13,10 @@ import type { Config } from "./config.js";
 import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
+import { registerRealtime } from "./plugins/realtime.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
+import { chatRoutes } from "./routes/chat.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { orgUnitRoutes } from "./routes/org-units.js";
@@ -174,6 +176,10 @@ export async function buildApp({
             "Authoring, publishing, acknowledgement and statistics you can explain.",
         },
         {
+          name: "chat",
+          description: "Channels, conversations, messages and unread state.",
+        },
+        {
           name: "settings",
           description: "SMTP and the notification queue.",
         },
@@ -194,7 +200,9 @@ export async function buildApp({
       await api.register(orgUnitRoutes);
       await api.register(announcementRoutes);
       await api.register(announcementCsvRoutes);
+      await api.register(chatRoutes);
       await api.register(settingsRoutes);
+      await registerRealtime(api);
     },
     { prefix: "/api/v1" },
   );

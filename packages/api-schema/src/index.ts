@@ -16,6 +16,26 @@ export {
 export { HealthResponse } from "./health.js";
 
 export {
+  ChannelKind,
+  ChannelMember,
+  ChannelName,
+  ChannelSummary,
+  ChatErrorCode,
+  CreateChannelRequest,
+  ListChannelMembersResponse,
+  ListChannelsResponse,
+  ListMessagesQuery,
+  ListMessagesResponse,
+  MarkReadRequest,
+  Message,
+  MessageAttachment,
+  MessageBody,
+  OpenDirectRequest,
+  RealtimeEvent,
+  SendMessageRequest,
+} from "./chat.js";
+
+export {
   NotificationQueueStatus,
   SettingsErrorCode,
   SmtpSettingsResponse,

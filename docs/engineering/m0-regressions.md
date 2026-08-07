@@ -232,11 +232,80 @@ rather than stale content.
 
 ---
 
+## 10. `removeAdditional: "all"` silently breaks every union body (M2)
+
+The server's ajv was configured with:
+
+```ts
+customOptions: {
+  removeAdditional: "all";
+}
+```
+
+which sounds like a tightening. It is, for plain objects. For an `anyOf` — a
+discriminated union like `AnnouncementTarget` — it is destructive: **ajv strips
+properties it considers additional _before_ evaluating the branches**. So
+
+```json
+{ "kind": "org_unit", "orgUnitId": "018f..." }
+```
+
+loses `orgUnitId`, then matches no branch, and comes back as:
+
+```
+400  body/targets/0/kind must be equal to constant,
+     must have required property 'orgUnitId',
+     must match a schema in anyOf
+```
+
+The error accuses the client of sending exactly what it did send. Every
+union-bodied request was rejected, and setting targets — the step everything
+else in M2 depends on — could not succeed at all.
+
+It was found only because a test helper was made to fail loudly on a
+non-200 from `setTargets`. Without that, thirteen tests failed three
+assertions downstream with `NO_TARGETS`, pointing at publishing rather than at
+ajv.
+
+**Fix**: `removeAdditional: false`. Undeclared properties are never read
+anyway, so stripping them bought nothing worth a broken union.
+
+**Guarded by**: `apps/server/src/announcements.test.ts` — every publishing test
+sets targets through the union schema, so a regression fails the whole suite
+immediately.
+
+---
+
+## 11. A named schema used twice in one response (M2)
+
+TypeBox schemas carrying `$id` become `$ref` components. `AnnouncementDetail`
+referenced `ContentRevisionSummary` twice — once for the current revision, once
+for the published one — and Fastify refused to build the serializer:
+
+```
+reference "ContentRevisionSummary" resolves to more than one schema
+```
+
+It fails at route registration, so it is loud rather than subtle. But it fails
+one `$id` at a time: fixing `ContentRevisionSummary` revealed the same problem
+in `ContentChangeKind`, then in `AnnouncementStatus`.
+
+**Fix and rule**: only top-level request and response shapes carry `$id`.
+Nested value types — enums, small embedded objects — do not.
+
+---
+
 ## The pattern
 
-Eight of the nine share one shape: **the system reports success while doing
+Nine of the eleven share one shape: **the system reports success while doing
 nothing**, or reports a fault while working correctly, or simply never answers.
 Nothing crashed, no stack trace pointed anywhere useful.
+
+Number 10 adds a third lesson, about diagnosis rather than design: **a helper
+that swallows a failed setup step relocates the symptom**. Thirteen tests
+blamed publishing for a fault in request validation, because the helper that
+set targets ignored its own status code. Making setup steps fail loudly, at the
+point they fail, is worth more than any amount of downstream assertion detail.
 
 Number 8 adds a second lesson: **a layer with no tests is a layer with no
 evidence**, however green everything around it is. The server was thoroughly

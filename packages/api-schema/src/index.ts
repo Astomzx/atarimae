@@ -38,6 +38,30 @@ export {
 } from "./users.js";
 
 export {
+  AcknowledgementStatistics,
+  AcknowledgeRequest,
+  AnnouncementBody,
+  AnnouncementDetail,
+  AnnouncementErrorCode,
+  AnnouncementStatus,
+  AnnouncementSummary,
+  AnnouncementTarget,
+  AnnouncementTitle,
+  CommandSummary,
+  ContentChangeKind,
+  ContentRevisionSummary,
+  CreateAnnouncementRequest,
+  ListAnnouncementsResponse,
+  ListMyAnnouncementsResponse,
+  MyAnnouncement,
+  PublishResponse,
+  ReviseContentRequest,
+  SetPersonalizationRequest,
+  SetTargetsRequest,
+  SetTargetsResponse,
+} from "./announcements.js";
+
+export {
   AssignOrgUnitRequest,
   CreateOrgUnitRequest,
   ListOrgUnitsQuery,

@@ -12,6 +12,7 @@ import type { Config } from "./config.js";
 import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
+import { announcementRoutes } from "./routes/announcements.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { orgUnitRoutes } from "./routes/org-units.js";
@@ -82,7 +83,15 @@ export async function buildApp({
       // and malformed ids reach the query layer.
       plugins: [ajvFormats],
       customOptions: {
-        removeAdditional: "all",
+        // NOT `removeAdditional: "all"`. ajv strips properties it considers
+        // additional *before* evaluating anyOf branches, so a discriminated
+        // union like AnnouncementTarget loses `orgUnitId` and then matches no
+        // branch at all — every union-bodied request is rejected as invalid.
+        // Undeclared properties are simply never read, so dropping them buys
+        // nothing worth that.
+        removeAdditional: false,
+        // Query and path parameters arrive as strings; this turns them into
+        // the declared types.
         coerceTypes: "array",
         allErrors: false,
       },
@@ -155,6 +164,11 @@ export async function buildApp({
           name: "org-units",
           description: "Departments, branches and teams, and who belongs to them.",
         },
+        {
+          name: "announcements",
+          description:
+            "Authoring, publishing, acknowledgement and statistics you can explain.",
+        },
       ],
     },
   });
@@ -170,6 +184,7 @@ export async function buildApp({
       await api.register(authRoutes);
       await api.register(userRoutes);
       await api.register(orgUnitRoutes);
+      await api.register(announcementRoutes);
     },
     { prefix: "/api/v1" },
   );

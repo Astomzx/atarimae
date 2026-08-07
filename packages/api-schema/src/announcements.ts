@@ -334,6 +334,59 @@ export const AcknowledgementStatistics = Type.Object(
 );
 export type AcknowledgementStatistics = Static<typeof AcknowledgementStatistics>;
 
+// ---------------------------------------------------------------------------
+// CSV
+// ---------------------------------------------------------------------------
+
+/**
+ * Bulk per-person content.
+ *
+ * Typing tomorrow's assignment for forty drivers one field at a time is not a
+ * workflow anybody will use twice, so the editor has to accept the spreadsheet
+ * the schedule already lives in.
+ */
+export const ImportPersonalizationsRequest = Type.Object(
+  {
+    /** Raw CSV. A leading UTF-8 BOM, as Excel writes, is accepted. */
+    csv: Type.String({ minLength: 1, maxLength: 2_000_000 }),
+    /**
+     * Applies to the whole batch. Judging minor versus major per row is not
+     * realistic when importing fifty at once, so the administrator decides
+     * once for the file.
+     */
+    changeKind: Type.Union([
+      Type.Literal("personal_minor"),
+      Type.Literal("personal_major"),
+    ]),
+    /** Only meaningful once published, and only with personal_major. */
+    requireReacknowledgement: Type.Optional(Type.Boolean({ default: false })),
+  },
+  { $id: "ImportPersonalizationsRequest" },
+);
+export type ImportPersonalizationsRequest = Static<typeof ImportPersonalizationsRequest>;
+
+export const ImportPersonalizationsResponse = Type.Object(
+  {
+    rowCount: Type.Integer(),
+    written: Type.Integer(),
+    /** Rows whose text matched what was already stored. */
+    unchanged: Type.Integer(),
+    reacknowledgementRequested: Type.Integer(),
+  },
+  { $id: "ImportPersonalizationsResponse" },
+);
+export type ImportPersonalizationsResponse = Static<
+  typeof ImportPersonalizationsResponse
+>;
+
+export const CsvErrorCode = {
+  /** The file is missing a column the importer requires. */
+  CSV_MISSING_COLUMN: "CSV_MISSING_COLUMN",
+  /** At least one row is unusable. Nothing was written — the batch is atomic. */
+  CSV_INVALID_ROWS: "CSV_INVALID_ROWS",
+} as const;
+export type CsvErrorCode = (typeof CsvErrorCode)[keyof typeof CsvErrorCode];
+
 export const AnnouncementErrorCode = {
   /** No published content revision to bind obligations to. */
   ANNOUNCEMENT_NOT_PUBLISHED: "ANNOUNCEMENT_NOT_PUBLISHED",

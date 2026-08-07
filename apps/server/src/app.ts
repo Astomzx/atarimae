@@ -12,6 +12,7 @@ import type { Config } from "./config.js";
 import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
+import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
@@ -191,6 +192,7 @@ export async function buildApp({
       await api.register(userRoutes);
       await api.register(orgUnitRoutes);
       await api.register(announcementRoutes);
+      await api.register(announcementCsvRoutes);
       await api.register(settingsRoutes);
     },
     { prefix: "/api/v1" },

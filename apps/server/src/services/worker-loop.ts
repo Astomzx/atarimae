@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { createMailer, loadSmtpSettings } from "./mailer.js";
 import { drainOutbox, reclaimStaleLocks } from "./notification-worker.js";
+import { queueDueReminders } from "./reminders.js";
 
 /**
  * Background delivery.
@@ -25,6 +26,13 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
     running = true;
 
     try {
+      // Queue before draining, so a reminder that becomes due is sent in the
+      // same pass rather than waiting for the next one.
+      const reminders = await queueDueReminders(app.db);
+      if (reminders > 0) {
+        app.log.info({ reminders }, "queued deadline reminders");
+      }
+
       const settings = await loadSmtpSettings(app.db);
       const mailer = createMailer(settings, app.secrets);
 

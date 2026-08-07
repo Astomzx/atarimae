@@ -29,7 +29,7 @@
     "db:reset": "node scripts/db.mjs reset",
     "db:verify": "node scripts/db.mjs verify",
     "db:test:reset": "node scripts/db.mjs reset --test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "prepare": "node -e \"process.exit(0)\""
   },
   "devDependencies": {

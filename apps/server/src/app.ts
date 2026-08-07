@@ -14,6 +14,7 @@ import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { orgUnitRoutes } from "./routes/org-units.js";
 import { setupRoutes } from "./routes/setup.js";
 import { userRoutes } from "./routes/users.js";
 
@@ -150,6 +151,10 @@ export async function buildApp({
         { name: "setup", description: "First-run initialisation." },
         { name: "auth", description: "Sign in, sessions, devices." },
         { name: "users", description: "Members, roles and access." },
+        {
+          name: "org-units",
+          description: "Departments, branches and teams, and who belongs to them.",
+        },
       ],
     },
   });
@@ -164,6 +169,7 @@ export async function buildApp({
       await api.register(setupRoutes);
       await api.register(authRoutes);
       await api.register(userRoutes);
+      await api.register(orgUnitRoutes);
     },
     { prefix: "/api/v1" },
   );

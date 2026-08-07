@@ -36,3 +36,15 @@ export {
   UserErrorCode,
   UserSummary,
 } from "./users.js";
+
+export {
+  AssignOrgUnitRequest,
+  CreateOrgUnitRequest,
+  ListOrgUnitsQuery,
+  ListOrgUnitsResponse,
+  OrgUnit,
+  OrgUnitErrorCode,
+  OrgUnitKind,
+  OrgUnitName,
+  UpdateOrgUnitRequest,
+} from "./org-units.js";

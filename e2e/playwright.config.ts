@@ -58,6 +58,9 @@ export default defineConfig({
       // Running the same specs at phone width is how that stays true.
       name: "mobile",
       use: { ...devices["Pixel 7"] },
+      // Pure API scenarios are viewport-independent. Running them under both
+      // projects would repeat identical assertions against one shared database.
+      testIgnore: /acceptance\.spec\.ts$/,
     },
   ],
 

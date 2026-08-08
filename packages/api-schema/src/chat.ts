@@ -147,6 +147,7 @@ export const ChannelMember = Type.Object({
   displayName: Type.String(),
   joinedAt: Timestamp,
 });
+export type ChannelMember = Static<typeof ChannelMember>;
 
 export const ListChannelMembersResponse = Type.Object(
   { items: Type.Array(ChannelMember) },

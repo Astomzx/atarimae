@@ -23,6 +23,10 @@ export default defineConfig({
       "/api": {
         target: apiTarget,
         changeOrigin: true,
+        // The chat socket lives at /api/v1/realtime. Without this the upgrade
+        // request is not forwarded and realtime works in production but not in
+        // development — the worst place for a difference to hide.
+        ws: true,
       },
     },
   },

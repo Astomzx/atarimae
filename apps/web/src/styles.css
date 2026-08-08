@@ -653,3 +653,178 @@ body {
 .badge--archived {
   border-color: var(--border);
 }
+
+/* ----------------------------------------------------------------- chat -- */
+
+/*
+ * One column at every width, like everything else here. A desktop sidebar with
+ * a phone fallback would be two products, and the phone one always ends up
+ * missing something.
+ */
+
+.channel__hash {
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+}
+
+.channel__preview {
+  overflow-wrap: anywhere;
+}
+
+.badge--unread {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A message addressed to you is a different question from forty unread ones. */
+.badge--mention {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.chat__older {
+  margin: 1rem 0 0;
+}
+
+.chat__log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.chat__day {
+  margin: 1rem 0 0.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/*
+ * Where you had got to. Deliberately a line across the conversation rather than
+ * a colour on the messages: "which of these have I already seen" is answered by
+ * a boundary, not by a shade somebody has to remember the meaning of.
+ */
+.chat__unread-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chat__unread-line::before,
+.chat__unread-line::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+}
+
+.chat__message {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem;
+}
+
+.chat__message--mine {
+  background: var(--surface-alt);
+}
+
+.chat__message--mentions-me {
+  border-left: 3px solid var(--warning);
+}
+
+.chat__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.chat__author {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chat__time {
+  font-variant-numeric: tabular-nums;
+}
+
+.chat__reply-button {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chat__reply-button:hover {
+  color: var(--text);
+}
+
+.chat__quote {
+  margin: 0.35rem 0 0;
+  padding: 0.25rem 0.6rem;
+  border-left: 2px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.chat__body {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat__mention {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/*
+ * Stays reachable while reading back through a long conversation, without a
+ * fixed-height inner scroller — the page scrolls the way every other page here
+ * scrolls, which is also what keeps a phone keyboard from covering the input.
+ */
+.chat__composer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 1rem;
+  padding: 1rem 0 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.chat__replying {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.chat__replying-label {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chat__replying-body {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}

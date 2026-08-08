@@ -1,8 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { api } from "../api.js";
 import { hasAtLeast, ROLE_LABEL, useSession } from "../auth.js";
+import { chatKeys } from "../chat/keys.js";
+import { useRealtime } from "../chat/useRealtime.js";
 
 /**
  * The same navigation at every width.
@@ -14,6 +16,23 @@ import { hasAtLeast, ROLE_LABEL, useSession } from "../auth.js";
  */
 export function Layout() {
   const { user } = useSession();
+
+  /**
+   * The socket is opened here, once, for as long as somebody is signed in —
+   * not per page. Opening it inside the chat screens would mean a message
+   * arriving while you are reading an announcement is never noticed, and the
+   * unread badge below would be wrong exactly when it matters.
+   */
+  useRealtime();
+
+  const channels = useQuery({
+    queryKey: chatKeys.channels(),
+    queryFn: api.chat.channels,
+  });
+
+  const joined = (channels.data?.items ?? []).filter((channel) => channel.isMember);
+  const unread = joined.reduce((total, channel) => total + channel.unreadCount, 0);
+  const mentioned = joined.some((channel) => channel.hasMention);
 
   const logout = useMutation({
     mutationFn: api.auth.logout,
@@ -53,6 +72,17 @@ export function Layout() {
                 公告管理
               </NavLink>
             )}
+            <NavLink to="/chat" className="nav__link">
+              チャット
+              {unread > 0 && (
+                <span
+                  className={`badge badge--unread${mentioned ? " badge--mention" : ""}`}
+                  data-testid="nav-unread"
+                >
+                  {unread}
+                </span>
+              )}
+            </NavLink>
             <NavLink to="/members" className="nav__link">
               メンバー
             </NavLink>

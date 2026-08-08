@@ -4,6 +4,8 @@ import { FullPageMessage, RequireAuth, useSetupStatus } from "./auth.js";
 import { Layout } from "./components/Layout.js";
 import { AnnouncementDetailPage } from "./pages/AnnouncementDetail.js";
 import { AnnouncementsPage } from "./pages/Announcements.js";
+import { ChannelRoute } from "./pages/Channel.js";
+import { ChatPage } from "./pages/Chat.js";
 import { HomePage } from "./pages/Home.js";
 import { MyAnnouncementsPage } from "./pages/MyAnnouncements.js";
 import { LoginPage } from "./pages/Login.js";
@@ -68,6 +70,8 @@ export function App() {
             </RequireAuth>
           }
         />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/:channelId" element={<ChannelRoute />} />
         <Route path="/members" element={<MembersPage />} />
         <Route
           path="/org-units"

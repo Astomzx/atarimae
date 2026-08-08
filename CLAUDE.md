@@ -89,31 +89,30 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State                              |
-| ---------------------------------------------------------------- | ---------------------------------- |
-| M0 foundation                                                    | done                               |
-| M1 accounts, org units, permissions                              | done                               |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done                               |
-| M3a chat                                                         | **backend done, no interface yet** |
-| M4 PWA + Tauri                                                   | not started                        |
-| M5 open API, webhooks, call providers                            | not started                        |
-| M6a security, attachments, backup/restore                        | not started                        |
-| M6b documentation, screenshots, release                          | not started                        |
+| Milestone                                                        | State                    |
+| ---------------------------------------------------------------- | ------------------------ |
+| M0 foundation                                                    | done                     |
+| M1 accounts, org units, permissions                              | done                     |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done                     |
+| M3a chat                                                         | done, except attachments |
+| M4 PWA + Tauri                                                   | not started              |
+| M5 open API, webhooks, call providers                            | not started              |
+| M6a security, attachments, backup/restore                        | not started              |
+| M6b documentation, screenshots, release                          | not started              |
 
-195 unit tests, 80 E2E, 7 migrations. CI green.
+195 server unit tests, 33 web unit tests, 104 E2E, 6 migrations. CI green.
 
 ## Suggested order from here
 
-1. **M3a chat interface** — the backend is complete and tested; nothing blocks it.
-2. **Attachment upload** (part of M6a, but it is what makes chat complete).
+1. **Attachment upload** (part of M6a, but it is what makes chat complete).
    Needs the file validation rules: allow-list extensions, verify actual type
    rather than trusting Content-Type, server-generated storage names, permission
    re-checked on download.
-3. **M5** — service accounts, API tokens (hashed, never encrypted), webhooks
+2. **M5** — service accounts, API tokens (hashed, never encrypted), webhooks
    with HMAC signatures, generic URL and HTTP call providers.
-4. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
+3. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
    installed on this machine.**
-5. **M6b** — three-language README, screenshots, demo video, release.
+4. **M6b** — three-language README, screenshots, demo video, release.
 
 ## Known gaps and unverified things
 
@@ -123,7 +122,16 @@ twice inside one response breaks Fastify's serializer.
   has never run. This is the last unverified item in the v1.0 completion
   criteria.
 - **Chat has no attachment upload.** The tables exist and messages carry an
-  always-empty attachment list.
+  always-empty attachment list. The interface renders the list, so adding the
+  endpoint is the only missing half.
+- **Chat is deliberately incomplete beyond that** (M3b, after v1.0): no editing,
+  deletion, reactions, link previews, search, threads, presence or typing
+  indicators. The interface matches the backend's scope exactly — nothing there
+  is stubbed or disabled.
+- **Mentions are picked, never typed.** The composer converts a name chosen from
+  the member list into the `@<uuid>` the server resolves; a name typed by hand
+  stays plain text. Two members sharing a display name makes the conversion
+  ambiguous, and the composer refuses rather than guessing.
 - **Screenshots and the demo video need the author.** The browser pane here
   cannot take screenshots. `e2e/tests/m2-ui.spec.ts` is the shot list —
   Playwright can record video by setting `video: "on"` in the config.
@@ -137,4 +145,6 @@ twice inside one response breaks Fastify's serializer.
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.
+- `docs/engineering/m3a-interface.md` — what building the chat interface found,
+  and the hazards it was written against.
 - `docs/architecture/decisions.md` — toolchain decisions and their reasons

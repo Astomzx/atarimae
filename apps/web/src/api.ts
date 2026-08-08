@@ -6,17 +6,23 @@ import type {
   AuthenticatedUser,
   CommandSummary,
   CreateAnnouncementRequest,
+  CreateChannelRequest,
   CreateOrgUnitRequest,
   CreateOwnerRequest,
   CreateUserRequest,
   ErrorResponse,
   HealthResponse,
+  ListChannelMembersResponse,
+  ListChannelsResponse,
+  ListMessagesResponse,
   LoginRequest,
+  Message,
   MyAnnouncement,
   OrgUnit,
   PublishResponse,
   ReviseContentRequest,
   Role,
+  SendMessageRequest,
   SessionSummary,
   SetupStatusResponse,
   SmtpSettingsResponse,
@@ -204,6 +210,28 @@ export const api = {
       ),
   },
 
+  /**
+   * Chat lives directly under /api/v1 — `/channels`, not `/chat/channels`.
+   */
+  chat: {
+    channels: () => request<ListChannelsResponse>("/channels"),
+    createChannel: (input: CreateChannelRequest) =>
+      send<{ id: string }>("POST", "/channels", input),
+    openDirect: (userId: string) =>
+      send<{ id: string }>("POST", "/channels/direct", { userId }),
+    join: (channelId: string) => send<void>("POST", `/channels/${channelId}/join`),
+    members: (channelId: string) =>
+      request<ListChannelMembersResponse>(`/channels/${channelId}/members`),
+    messages: (channelId: string, before?: string) => {
+      const query = before ? `?before=${before}` : "";
+      return request<ListMessagesResponse>(`/channels/${channelId}/messages${query}`);
+    },
+    sendMessage: (channelId: string, input: SendMessageRequest) =>
+      send<Message>("POST", `/channels/${channelId}/messages`, input),
+    markRead: (channelId: string, messageId: string) =>
+      send<void>("POST", `/channels/${channelId}/read`, { messageId }),
+  },
+
   orgUnits: {
     list: (includeDisabled = false) =>
       request<{ items: OrgUnit[] }>(
@@ -238,6 +266,12 @@ const MESSAGES: Record<string, string> = {
   NO_ELIGIBLE_RECIPIENTS: "この操作の対象となるメンバーがいませんでした。",
   NOT_A_RECIPIENT: "この公告はあなたに宛てられていません。",
   SMTP_NOT_CONFIGURED: "メール送信の設定がまだ行われていません。",
+  CHANNEL_FORBIDDEN: "このチャンネルに参加してから投稿してください。",
+  CHANNEL_NAME_TAKEN: "同じ名前のチャンネルが既に存在します。",
+  CHANNEL_ARCHIVED: "このチャンネルはアーカイブ済みのため投稿できません。",
+  CANNOT_MODIFY_DIRECT: "1対1の会話のメンバーは変更できません。",
+  CANNOT_MESSAGE_SELF: "自分自身との会話は作成できません。",
+  REPLY_ACROSS_CHANNELS: "同じチャンネル内のメッセージにのみ返信できます。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

@@ -60,6 +60,30 @@ leaves a session, and it asserts the login form is visible.
 
 ---
 
+## 3. The composer covered the conversation it belonged to
+
+The message box was `position: sticky; bottom: 0`, so it stayed reachable while
+reading back through a long channel. Then attachments added a file picker and a
+line of help text to it, and on a phone the bar became tall enough to sit over
+the messages underneath.
+
+Playwright found it at phone width and not at desktop width: a click on the
+first message's 返信 button timed out, because the button was behind the
+composer. A real person would have tapped a message and hit the file picker.
+
+A bar pinned over the content is a promise that the content is short, and this
+one had just stopped being able to keep it.
+
+**Fix**: the composer is in the flow of the page like everything else here. The
+page already scrolls to the newest message on arrival, so it is in view exactly
+when there is something to answer.
+
+**Guarded by**: `e2e/tests/m3a-ui.spec.ts` — the reply and attachment scenarios
+run at both widths, which is what turned a desktop-only assumption into a
+failing test rather than a bug report.
+
+---
+
 ## Hazards this was written against
 
 Not defects — none of these ever ran wrong — but each is a mistake the design

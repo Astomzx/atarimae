@@ -6,6 +6,7 @@ import {
   channelTitle,
   encodeMentions,
   firstUnreadId,
+  formatBytes,
   isSameLocalDay,
   newestMessageId,
   parseBody,
@@ -327,6 +328,25 @@ describe("channelTitle", () => {
     expect(channelTitle({ kind: "direct", name: null, counterpartName: null })).toBe(
       "会話",
     );
+  });
+});
+
+describe("formatBytes", () => {
+  it("shows small files in bytes", () => {
+    expect(formatBytes(512)).toBe("512 B");
+  });
+
+  it("shows kilobytes without a misleading decimal", () => {
+    expect(formatBytes(2048)).toBe("2 KB");
+  });
+
+  /**
+   * Binary units, matching the 25 MiB ceiling. A file the server refuses must
+   * not be displayed as "26.2 MB" beside a stated limit of 25 MB.
+   */
+  it("shows megabytes in the same units as the limit", () => {
+    expect(formatBytes(26_214_400)).toBe("25 MB");
+    expect(formatBytes(1_572_864)).toBe("1.5 MB");
   });
 });
 

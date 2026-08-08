@@ -152,6 +152,52 @@ export async function openDirectConversation(
 }
 
 /**
+ * Attaches uploaded files to the message that carries them.
+ *
+ * Every id must pass all four conditions in one statement: it exists, this
+ * person uploaded it, it was uploaded to this channel, and nothing has claimed
+ * it yet. Whatever does not match is not silently skipped — the count is
+ * compared and the whole send fails.
+ *
+ * Dropping an attachment and delivering the message anyway is the exact
+ * failure this product argues against: a report of success, with the thing
+ * anybody cared about missing.
+ */
+export async function claimAttachments(
+  client: DatabaseClient,
+  messageId: string,
+  channelId: string,
+  userId: string,
+  attachmentIds: readonly string[],
+): Promise<void> {
+  if (attachmentIds.length === 0) return;
+
+  const unique = [...new Set(attachmentIds)];
+
+  const { rows } = await client.query<{ id: string }>(
+    `UPDATE message_attachments
+        SET message_id = $1
+      WHERE id = ANY($2::uuid[])
+        AND message_id IS NULL
+        AND channel_id = $3
+        AND uploaded_by = $4
+      RETURNING id`,
+    [messageId, unique, channelId, userId],
+  );
+
+  if (rows.length !== unique.length) {
+    const claimed = new Set(rows.map((row) => row.id));
+
+    throw new ApiError(
+      422,
+      ChatErrorCode.ATTACHMENT_NOT_CLAIMABLE,
+      "One or more attachments could not be attached to this message.",
+      { attachmentIds: unique.filter((id) => !claimed.has(id)) },
+    );
+  }
+}
+
+/**
  * Extracts @mentions from a message body.
  *
  * Resolved at write time so "what mentions me" is an index lookup rather than

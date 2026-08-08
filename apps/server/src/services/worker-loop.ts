@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
+import { sweepUnclaimedAttachments } from "./attachment-sweep.js";
 import { createMailer, loadSmtpSettings } from "./mailer.js";
 import { drainOutbox, reclaimStaleLocks } from "./notification-worker.js";
 import { queueDueReminders } from "./reminders.js";
@@ -68,6 +69,18 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
       }
     } catch (error) {
       app.log.error({ err: error }, "failed to reclaim stale outbox locks");
+    }
+
+    // Files picked and then thought better of. Left alone they accumulate for
+    // the life of the deployment, which is the sort of leak that is discovered
+    // when a disk fills up.
+    try {
+      const swept = await sweepUnclaimedAttachments(app.db, app.attachments);
+      if (swept.removed > 0 || swept.failed > 0) {
+        app.log.info({ ...swept }, "swept unclaimed attachments");
+      }
+    } catch (error) {
+      app.log.error({ err: error }, "failed to sweep unclaimed attachments");
     }
   };
 

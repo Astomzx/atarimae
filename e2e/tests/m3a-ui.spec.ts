@@ -341,7 +341,90 @@ test.describe("M3a: talking to each other", () => {
     }
   });
 
-  test("12. chat is reachable from the navigation at every width", async ({ page }) => {
+  /**
+   * A file, sent and received. The interesting half is the refusal: a renamed
+   * executable is rejected while the sender is still looking at it, not after
+   * somebody downloads it.
+   */
+  test("12. a file is attached, and a colleague can open it", async ({
+    browser,
+    page,
+  }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/chat");
+    await page.getByTestId(`channel-row-${CHANNEL}`).getByText(CHANNEL).click();
+
+    await page.getByTestId("attach-file").setInputFiles({
+      name: "作業手順.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n"),
+    });
+
+    await expect(page.getByTestId("pending-attachments")).toContainText("作業手順.pdf");
+
+    await page.getByTestId("message-input").fill("手順書を共有します。");
+    await page.getByTestId("send-message").click();
+
+    const last = page.getByTestId("message").last();
+    await expect(last.getByTestId("attachment-link")).toContainText("作業手順.pdf");
+
+    // 田中 downloads it. The permission is re-checked on the way out, so this
+    // proves the whole path and not just the link.
+    const tanaka = await openAs(browser, TANAKA.email, MEMBER_PASSWORD);
+    try {
+      await tanaka.page.goto("/chat");
+      await tanaka.page.getByTestId(`channel-row-${CHANNEL}`).getByText(CHANNEL).click();
+
+      const link = tanaka.page.getByTestId("attachment-link").last();
+      await expect(link).toContainText("作業手順.pdf");
+
+      const download = tanaka.page.waitForEvent("download");
+      await link.click();
+      expect((await download).suggestedFilename()).toBe("作業手順.pdf");
+    } finally {
+      await tanaka.context.close();
+    }
+  });
+
+  /**
+   * The rule that matters most: the extension is a claim and the bytes are the
+   * evidence. Refused at the moment the file is chosen.
+   */
+  test("13. an executable renamed to a spreadsheet is refused", async ({ page }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/chat");
+    await page.getByTestId(`channel-row-${CHANNEL}`).getByText(CHANNEL).click();
+
+    await page.getByTestId("attach-file").setInputFiles({
+      name: "勤務表.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      // MZ — a Windows executable wearing a spreadsheet's name.
+      buffer: Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]),
+    });
+
+    await expect(page.getByTestId("upload-error")).toContainText(
+      "ファイルの中身が拡張子と一致しません",
+    );
+    await expect(page.getByTestId("pending-attachments")).toHaveCount(0);
+  });
+
+  test("14. a kind of file that is not allowed at all is refused", async ({ page }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/chat");
+    await page.getByTestId(`channel-row-${CHANNEL}`).getByText(CHANNEL).click();
+
+    await page.getByTestId("attach-file").setInputFiles({
+      name: "setup.exe",
+      mimeType: "application/octet-stream",
+      buffer: Buffer.from([0x4d, 0x5a, 0x90, 0x00]),
+    });
+
+    await expect(page.getByTestId("upload-error")).toContainText(
+      "この種類のファイルは添付できません",
+    );
+  });
+
+  test("15. chat is reachable from the navigation at every width", async ({ page }) => {
     await signIn(page, TANAKA.email, MEMBER_PASSWORD);
 
     await page.getByRole("link", { name: "チャット" }).click();

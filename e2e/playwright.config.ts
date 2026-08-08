@@ -78,6 +78,9 @@ export default defineConfig({
         NODE_ENV: "test",
         LOG_LEVEL: "warn",
         PUBLIC_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
+        // Uploads land in their own directory, never in the one a development
+        // session is using.
+        ATTACHMENT_ROOT: join(ROOT, "e2e", "var", "attachments"),
       },
     },
     {

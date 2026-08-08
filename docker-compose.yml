@@ -58,8 +58,18 @@ services:
 
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Chat attachments. A plain directory rather than object storage, so a
+      # backup is this volume plus a database dump and nothing else.
+      ATTACHMENT_ROOT: /var/lib/atarimae/attachments
+    volumes:
+      # WITHOUT THIS VOLUME every uploaded file is destroyed by the next
+      # `docker compose up --build`, and the database keeps rows pointing at
+      # them — downloads that fail forever, with no error until somebody clicks.
+      - attachments:/var/lib/atarimae/attachments
     ports:
       - "${APP_PORT:-3000}:3000"
 
 volumes:
   db-data:
+  attachments:

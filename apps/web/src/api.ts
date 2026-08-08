@@ -26,6 +26,7 @@ import type {
   SessionSummary,
   SetupStatusResponse,
   SmtpSettingsResponse,
+  UploadAttachmentResponse,
   UserSummary,
 } from "@atarimae/api-schema";
 
@@ -47,6 +48,19 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * A filename in a header, RFC 5987.
+ *
+ * The plain form is ASCII-only, so a Japanese name has to travel in the
+ * encoded one; the ASCII fallback is kept for anything that only understands
+ * the old form, with the characters it cannot carry replaced rather than
+ * dropped.
+ */
+export function contentDispositionFilename(name: string): string {
+  const ascii = name.replace(/[^\u0020-\u007e]/g, "_").replace(/["\\]/g, "_");
+  return `filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
@@ -54,7 +68,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // request carrying `content-type: application/json` with an empty body, so
   // sending it unconditionally breaks every write with no payload — sign-out,
   // disable, restore, revoke.
-  if (init?.body !== undefined) {
+  //
+  // An upload sets its own content type, and must keep it: declaring JSON over
+  // a file is how a binary body arrives as unparseable text.
+  if (init?.body !== undefined && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
 
@@ -228,6 +245,21 @@ export const api = {
     },
     sendMessage: (channelId: string, input: SendMessageRequest) =>
       send<Message>("POST", `/channels/${channelId}/messages`, input),
+    /**
+     * Uploads the file itself as the body.
+     *
+     * The name travels in Content-Disposition rather than the URL, so it never
+     * reaches a proxy access log — a filename can be as revealing as the file.
+     */
+    uploadAttachment: (channelId: string, file: File) =>
+      request<UploadAttachmentResponse>(`/channels/${channelId}/attachments`, {
+        method: "POST",
+        body: file,
+        headers: {
+          "content-type": "application/octet-stream",
+          "content-disposition": `attachment; ${contentDispositionFilename(file.name)}`,
+        },
+      }),
     markRead: (channelId: string, messageId: string) =>
       send<void>("POST", `/channels/${channelId}/read`, { messageId }),
   },
@@ -272,6 +304,16 @@ const MESSAGES: Record<string, string> = {
   CANNOT_MODIFY_DIRECT: "1対1の会話のメンバーは変更できません。",
   CANNOT_MESSAGE_SELF: "自分自身との会話は作成できません。",
   REPLY_ACROSS_CHANNELS: "同じチャンネル内のメッセージにのみ返信できます。",
+  ATTACHMENT_TYPE_NOT_ALLOWED:
+    "この種類のファイルは添付できません。PDF・画像・Office 文書・CSV などをご利用ください。",
+  ATTACHMENT_CONTENT_MISMATCH:
+    "ファイルの中身が拡張子と一致しません。名前を変えただけのファイルは添付できません。",
+  ATTACHMENT_TOO_LARGE: "ファイルが大きすぎます。1つあたり25MBまでです。",
+  ATTACHMENT_EMPTY: "中身が空のファイルは添付できません。",
+  ATTACHMENT_NAME_INVALID: "このファイル名は使用できません。",
+  ATTACHMENT_NOT_CLAIMABLE:
+    "添付ファイルを送信できませんでした。時間をおいてから、もう一度添付してください。",
+  PAYLOAD_TOO_LARGE: "ファイルが大きすぎます。1つあたり25MBまでです。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

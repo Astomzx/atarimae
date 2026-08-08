@@ -259,6 +259,21 @@ export function channelTitle(channel: {
   return channel.name ?? "会話";
 }
 
+/**
+ * A file size somebody can judge at a glance.
+ *
+ * Binary units, because the 25 MiB ceiling is a binary number and a file the
+ * server refuses should not be displayed as "26.2 MB" next to a limit of "25
+ * MB".
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+
+  const megabytes = bytes / (1024 * 1024);
+  return `${megabytes < 10 ? megabytes.toFixed(1) : Math.round(megabytes)} MB`;
+}
+
 const DAY_FORMAT = new Intl.DateTimeFormat("ja-JP", {
   year: "numeric",
   month: "long",

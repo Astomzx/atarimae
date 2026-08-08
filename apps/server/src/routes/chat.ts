@@ -10,6 +10,7 @@ import {
   Message,
   OpenDirectRequest,
   SendMessageRequest,
+  UploadAttachmentResponse,
   Uuid,
   type ChannelSummary,
 } from "@atarimae/api-schema";
@@ -18,10 +19,20 @@ import { Type } from "@sinclair/typebox";
 
 import { withTransaction } from "../db.js";
 import { ApiError } from "../errors.js";
+import {
+  ALLOWED_TYPES,
+  encodeFileName,
+  MAX_ATTACHMENT_BYTES,
+  parseFileName,
+  storageKeyFor,
+  validateUpload,
+  type UploadRejection,
+} from "../lib/attachments.js";
 import { requireAuth } from "../plugins/auth.js";
 import {
   assertCanPost,
   assertCanRead,
+  claimAttachments,
   loadChannelAccess,
   openDirectConversation,
   resolveMentions,
@@ -39,6 +50,20 @@ interface MessageRow {
   mentions: string[] | null;
   attachments:
     { id: string; name: string; contentType: string; byteSize: number }[] | null;
+}
+
+/**
+ * Whether a stored type may be shown in the conversation rather than only
+ * downloaded.
+ *
+ * Derived from the same table the upload was validated against, so a format
+ * cannot become inline by being stored with a different content type than the
+ * one its bytes earned.
+ */
+function isInlineType(contentType: string): boolean {
+  return Object.values(ALLOWED_TYPES).some(
+    (kind) => kind.contentType === contentType && kind.inline === true,
+  );
 }
 
 const SELECT_MESSAGE = `
@@ -76,9 +101,34 @@ function toMessage(row: MessageRow) {
       contentType: a.contentType,
       byteSize: Number(a.byteSize),
       url: `/api/v1/attachments/${a.id}`,
+      inline: isInlineType(a.contentType),
     })),
     createdAt: row.created_at,
   };
+}
+
+/** Each rejection gets its own code, so the client can say which rule was hit. */
+function rejectionToError(reason: UploadRejection): [number, string, string] {
+  switch (reason) {
+    case "EMPTY":
+      return [422, ChatErrorCode.ATTACHMENT_EMPTY, "The file is empty."];
+    case "TOO_LARGE":
+      return [413, ChatErrorCode.ATTACHMENT_TOO_LARGE, "The file is too large."];
+    case "EXTENSION_NOT_ALLOWED":
+      return [
+        422,
+        ChatErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED,
+        "This kind of file cannot be attached.",
+      ];
+    case "CONTENT_MISMATCH":
+      return [
+        422,
+        ChatErrorCode.ATTACHMENT_CONTENT_MISMATCH,
+        "The file's contents do not match its extension.",
+      ];
+    case "NAME_INVALID":
+      return [400, ChatErrorCode.ATTACHMENT_NAME_INVALID, "The filename is not usable."];
+  }
 }
 
 export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
@@ -410,7 +460,7 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
     async (request, reply) => {
       const user = request.user!;
       const { channelId } = request.params;
-      const { body, replyToId } = request.body;
+      const { body, replyToId, attachmentIds } = request.body;
 
       const message = await withTransaction(app.db, async (client) => {
         assertCanPost(await loadChannelAccess(client, channelId, user.id));
@@ -439,6 +489,16 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
           [channelId, user.id, body, replyToId ?? null],
         );
         const messageId = inserted[0]!.id;
+
+        // Inside the same transaction as the insert: a message whose files
+        // could not be attached must not exist at all.
+        await claimAttachments(
+          client,
+          messageId,
+          channelId,
+          user.id,
+          attachmentIds ?? [],
+        );
 
         const mentioned = await resolveMentions(client, channelId, body);
         if (mentioned.length > 0) {
@@ -475,6 +535,186 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
         });
 
       return reply.status(201).send(message);
+    },
+  );
+
+  /**
+   * Uploading a file, before the message that will carry it exists.
+   *
+   * The body is the file itself rather than a multipart form. Two reasons: the
+   * filename travels in `Content-Disposition` instead of the URL, so it never
+   * reaches a proxy access log — "解雇通知_田中.pdf" is not a thing to write
+   * into one — and there is no multipart parser to depend on or to get wrong.
+   *
+   * Nothing the client says about the type is believed. The extension must be
+   * on the allow-list and the bytes must match it.
+   */
+  app.post(
+    "/channels/:channelId/attachments",
+    {
+      preHandler: requireAuth,
+      // The global ceiling is 1 MiB. A body over this is refused by Fastify
+      // before it is read into memory, which is what stops a 2 GB upload from
+      // being buffered before anybody checks its size.
+      bodyLimit: MAX_ATTACHMENT_BYTES + 1024,
+      schema: {
+        tags: ["chat"],
+        summary: "Upload a file to attach to a message",
+        description:
+          "The body is the raw file. The name travels in Content-Disposition " +
+          "(RFC 5987), which is also the only form that carries a Japanese " +
+          "filename intact. The upload is attached by passing its id as " +
+          "`attachmentIds` when sending a message; one that is never sent is " +
+          "removed by a periodic sweep.",
+        consumes: ["application/octet-stream"],
+        params: Type.Object({ channelId: Uuid }),
+        response: { 201: UploadAttachmentResponse, ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const user = request.user!;
+      const { channelId } = request.params;
+
+      const fileName = parseFileName(request.headers["content-disposition"]);
+      if (fileName === null) {
+        throw new ApiError(
+          400,
+          ChatErrorCode.ATTACHMENT_NAME_INVALID,
+          "A Content-Disposition header with a filename is required.",
+        );
+      }
+
+      const bytes = request.body as Uint8Array;
+      const result = validateUpload(fileName, bytes);
+
+      if (!result.ok) {
+        const [status, code, message] = rejectionToError(result.reason);
+        throw new ApiError(status, code, message, {
+          ...(result.allowed ? { allowedExtensions: result.allowed } : {}),
+        });
+      }
+
+      // Membership, not just readability: uploading into a channel you cannot
+      // post in stores a file that can never be sent.
+      const id = await withTransaction(app.db, async (client) => {
+        assertCanPost(await loadChannelAccess(client, channelId, user.id));
+
+        const { rows } = await client.query<{ id: string }>(
+          `INSERT INTO message_attachments
+             (channel_id, uploaded_by, original_name, storage_key,
+              content_type, byte_size)
+           VALUES ($1, $2, $3, '', $4, $5)
+           RETURNING id`,
+          [channelId, user.id, fileName, result.contentType, bytes.length],
+        );
+        const attachmentId = rows[0]!.id;
+
+        // The key is generated from the row's own id, so it is decided by the
+        // database rather than by anything in the request.
+        const storageKey = storageKeyFor(attachmentId);
+
+        // Written before the transaction commits: a committed row pointing at
+        // a file that was never written is a broken download forever, while a
+        // written file with no row is swept away as an orphan.
+        await app.attachments.write(storageKey, bytes);
+
+        await client.query(
+          "UPDATE message_attachments SET storage_key = $2 WHERE id = $1",
+          [attachmentId, storageKey],
+        );
+
+        return attachmentId;
+      });
+
+      return reply.status(201).send({
+        id,
+        name: fileName,
+        contentType: result.contentType,
+        byteSize: bytes.length,
+        url: `/api/v1/attachments/${id}`,
+        inline: result.inline,
+      });
+    },
+  );
+
+  /**
+   * Downloading one.
+   *
+   * Permission is re-checked here against the channel the file was uploaded
+   * to, every time. A link is not a capability: somebody removed from a private
+   * channel must stop being able to fetch its files, including the ones they
+   * were sent while they were still a member.
+   */
+  app.get(
+    "/attachments/:attachmentId",
+    {
+      preHandler: requireAuth,
+      schema: {
+        tags: ["chat"],
+        summary: "Download an attachment",
+        params: Type.Object({ attachmentId: Uuid }),
+        // No response schema: the body is the file. Declaring one would make
+        // Fastify's serializer try to turn a stream into JSON.
+        produces: ["application/octet-stream"],
+      },
+    },
+    async (request, reply) => {
+      const user = request.user!;
+      const { attachmentId } = request.params;
+
+      const attachment = await withTransaction(app.db, async (client) => {
+        const { rows } = await client.query<{
+          original_name: string;
+          storage_key: string;
+          content_type: string;
+          // int8 arrives as a BigInt — db.ts installs that parser so large
+          // counts cannot silently lose precision.
+          byte_size: bigint;
+          channel_id: string;
+          message_id: string | null;
+          uploaded_by: string;
+        }>(
+          `SELECT original_name, storage_key, content_type, byte_size,
+                  channel_id, message_id, uploaded_by
+             FROM message_attachments WHERE id = $1`,
+          [attachmentId],
+        );
+
+        const row = rows[0];
+        if (!row) throw ApiError.notFound("Attachment not found.");
+
+        assertCanRead(await loadChannelAccess(client, row.channel_id, user.id));
+
+        // An upload nobody has sent yet is visible only to whoever uploaded it.
+        // Guessing an id must not reveal a file still being written into a
+        // message.
+        if (row.message_id === null && row.uploaded_by !== user.id) {
+          throw ApiError.notFound("Attachment not found.");
+        }
+
+        return row;
+      });
+
+      const inline = isInlineType(attachment.content_type);
+
+      return (
+        reply
+          .header("content-type", attachment.content_type)
+          // A BigInt reaches Node's header writer as an object it refuses to
+          // convert, and the response fails after the status line is already
+          // committed — a 500 with no usable message.
+          .header("content-length", String(attachment.byte_size))
+          // The stored type is served as-is and sniffing is refused, so a file
+          // whose bytes happen to look like HTML cannot be rendered as a page
+          // from this origin.
+          .header("x-content-type-options", "nosniff")
+          .header(
+            "content-disposition",
+            `${inline ? "inline" : "attachment"}; ${encodeFileName(attachment.original_name)}`,
+          )
+          .header("cache-control", "private, max-age=300")
+          .send(app.attachments.read(attachment.storage_key))
+      );
     },
   );
 

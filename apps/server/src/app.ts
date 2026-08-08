@@ -14,6 +14,7 @@ import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerRealtime } from "./plugins/realtime.js";
+import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
 import { chatRoutes } from "./routes/chat.js";
@@ -47,6 +48,7 @@ declare module "fastify" {
     config: Config;
     db: Database;
     secrets: SecretStore;
+    attachments: AttachmentStore;
   }
 }
 
@@ -114,6 +116,23 @@ export async function buildApp({
       current: config.ENCRYPTION_KEY_CURRENT,
       previous: config.ENCRYPTION_KEY_PREVIOUS,
     }),
+  );
+  app.decorate("attachments", new AttachmentStore(config.ATTACHMENT_ROOT));
+
+  /**
+   * Attachment uploads send the file as the body.
+   *
+   * Registered as a parser rather than handled inside the route: without one,
+   * Fastify answers every upload with 415 before the route is reached. The
+   * buffer is handed over untouched — nothing is decoded, and the declared
+   * type is not believed by anything downstream.
+   */
+  app.addContentTypeParser(
+    "application/octet-stream",
+    { parseAs: "buffer" },
+    (_request, body, done) => {
+      done(null, body);
+    },
   );
 
   registerErrorHandler(app, { spaFallback: config.WEB_DIST_PATH !== undefined });

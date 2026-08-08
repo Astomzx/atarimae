@@ -89,29 +89,27 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State                    |
-| ---------------------------------------------------------------- | ------------------------ |
-| M0 foundation                                                    | done                     |
-| M1 accounts, org units, permissions                              | done                     |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done                     |
-| M3a chat                                                         | done, except attachments |
-| M4 PWA + Tauri                                                   | not started              |
-| M5 open API, webhooks, call providers                            | not started              |
-| M6a security, attachments, backup/restore                        | not started              |
-| M6b documentation, screenshots, release                          | not started              |
+| Milestone                                                        | State            |
+| ---------------------------------------------------------------- | ---------------- |
+| M0 foundation                                                    | done             |
+| M1 accounts, org units, permissions                              | done             |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
+| M3a chat                                                         | done             |
+| M4 PWA + Tauri                                                   | not started      |
+| M5 open API, webhooks, call providers                            | not started      |
+| M6a security, attachments, backup/restore                        | attachments done |
+| M6b documentation, screenshots, release                          | not started      |
 
-195 server unit tests, 33 web unit tests, 104 E2E, 6 migrations. CI green.
+248 server unit tests, 40 web unit tests, 110 E2E, 7 migrations. CI green.
 
 ## Suggested order from here
 
-1. **Attachment upload** (part of M6a, but it is what makes chat complete).
-   Needs the file validation rules: allow-list extensions, verify actual type
-   rather than trusting Content-Type, server-generated storage names, permission
-   re-checked on download.
-2. **M5** — service accounts, API tokens (hashed, never encrypted), webhooks
+1. **M5** — service accounts, API tokens (hashed, never encrypted), webhooks
    with HMAC signatures, generic URL and HTTP call providers.
-3. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
+2. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
    installed on this machine.**
+3. **The rest of M6a** — backup/restore, and the security pass. Attachments are
+   done; see `docs/architecture/attachments.md`.
 4. **M6b** — three-language README, screenshots, demo video, release.
 
 ## Known gaps and unverified things
@@ -121,10 +119,12 @@ twice inside one response breaks Fastify's serializer.
   `apps/server/src/static-hosting.test.ts`, but `docker compose up -d --build`
   has never run. This is the last unverified item in the v1.0 completion
   criteria.
-- **Chat has no attachment upload.** The tables exist and messages carry an
-  always-empty attachment list. The interface renders the list, so adding the
-  endpoint is the only missing half.
-- **Chat is deliberately incomplete beyond that** (M3b, after v1.0): no editing,
+- **Attachments need a mounted volume in Docker.** `ATTACHMENT_ROOT` is a plain
+  directory; `docker-compose.yml` declares the volume. Without it a rebuild
+  destroys every uploaded file while the database keeps the rows pointing at
+  them. Also: no virus scanning — the rules verify what a file _is_, not
+  whether its contents are hostile. See `docs/architecture/attachments.md`.
+- **Chat is deliberately incomplete** (M3b, after v1.0): no editing,
   deletion, reactions, link previews, search, threads, presence or typing
   indicators. The interface matches the backend's scope exactly — nothing there
   is stubbed or disabled.
@@ -142,6 +142,8 @@ twice inside one response breaks Fastify's serializer.
 
 - `docs/architecture/announcement-model.md` — why acknowledgement statistics are
   trustworthy, constraint by constraint
+- `docs/architecture/attachments.md` — the four upload rules, the hole each one
+  closes, and the limits stated plainly
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.

@@ -39,6 +39,17 @@ const ConfigSchema = Type.Object({
    */
   WEB_DIST_PATH: Type.Optional(Type.String()),
 
+  /**
+   * Where chat attachments are written.
+   *
+   * Deliberately a plain directory rather than object storage: an organisation
+   * that can run one container should not also need an S3 account, and a
+   * backup of this directory plus a database dump is the whole system. In the
+   * container it is a mounted volume — if it is not, an upgrade silently loses
+   * every file anybody ever sent.
+   */
+  ATTACHMENT_ROOT: Type.String({ default: "./var/attachments" }),
+
   LOG_LEVEL: Type.Union(
     [
       Type.Literal("trace"),
@@ -67,6 +78,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ENCRYPTION_KEY_PREVIOUS: env["ENCRYPTION_KEY_PREVIOUS"],
     SESSION_SECRET: env["SESSION_SECRET"],
     WEB_DIST_PATH: env["WEB_DIST_PATH"],
+    ATTACHMENT_ROOT: env["ATTACHMENT_ROOT"],
     LOG_LEVEL: env["LOG_LEVEL"],
   });
 

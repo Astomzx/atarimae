@@ -1,4 +1,8 @@
-import type { ChannelMember, Message } from "@atarimae/api-schema";
+import type {
+  ChannelMember,
+  Message,
+  UploadAttachmentResponse,
+} from "@atarimae/api-schema";
 import {
   useInfiniteQuery,
   useMutation,
@@ -16,6 +20,7 @@ import {
   channelTitle,
   encodeMentions,
   firstUnreadId,
+  formatBytes,
   formatDay,
   formatTime,
   isSameLocalDay,
@@ -313,6 +318,42 @@ function MessageItem({
             ),
           )}
         </p>
+
+        {message.attachments.length > 0 && (
+          <ul className="chat__attachments" data-testid="message-attachments">
+            {message.attachments.map((attachment) => (
+              <li key={attachment.id} className="chat__attachment">
+                {attachment.inline ? (
+                  /*
+                   * Only formats whose bytes the server verified are shown
+                   * this way, and SVG is not one of them — it is not accepted
+                   * at all, because an image that can carry script is not an
+                   * image.
+                   */
+                  <a href={attachment.url} target="_blank" rel="noreferrer">
+                    <img
+                      className="chat__image"
+                      src={attachment.url}
+                      alt={attachment.name}
+                      loading="lazy"
+                    />
+                  </a>
+                ) : null}
+                <a
+                  className="chat__attachment-link"
+                  href={attachment.url}
+                  download={attachment.name}
+                  data-testid="attachment-link"
+                >
+                  {attachment.name}
+                  <span className="chat__attachment-size">
+                    {formatBytes(attachment.byteSize)}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </article>
     </>
   );
@@ -335,16 +376,31 @@ function Composer({
   const [text, setText] = useState("");
   const [picked, setPicked] = useState<MentionCandidate[]>([]);
   const [ambiguous, setAmbiguous] = useState<string[]>([]);
+  const [attached, setAttached] = useState<UploadAttachmentResponse[]>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  /**
+   * The file starts moving as soon as it is chosen, rather than when the
+   * message is sent. A file that is too large or of a kind that cannot be
+   * attached is refused while there is still something to do about it — not
+   * after the message has been written.
+   */
+  const uploadFile = useMutation({
+    mutationFn: (file: File) => api.chat.uploadAttachment(channelId, file),
+    onSuccess: (attachment) => setAttached((current) => [...current, attachment]),
+  });
 
   const sendMessage = useMutation({
     mutationFn: (body: string) =>
       api.chat.sendMessage(channelId, {
         body,
         ...(replyTo ? { replyToId: replyTo.id } : {}),
+        ...(attached.length > 0 ? { attachmentIds: attached.map((a) => a.id) } : {}),
       }),
     onSuccess: async (message) => {
       setText("");
       setPicked([]);
+      setAttached([]);
       onClearReply();
 
       // The socket delivers this message to its author as well, and
@@ -359,9 +415,12 @@ function Composer({
 
   const submit = () => {
     const trimmed = text.trim();
-    if (trimmed === "") return;
+    // A file with no words is still a message worth sending, but the server
+    // requires a body — so an attachment alone carries its own filename.
+    const body = trimmed === "" && attached.length > 0 ? attached[0]!.name : trimmed;
+    if (body === "") return;
 
-    const encoded = encodeMentions(trimmed, picked);
+    const encoded = encodeMentions(body, picked);
 
     /**
      * Two colleagues with the same display name. Sending would mention one of
@@ -457,17 +516,80 @@ function Composer({
           </div>
         )}
 
+        <div className="field">
+          <span className="field__label">ファイルを添付</span>
+          <input
+            ref={fileInput}
+            type="file"
+            className="field__input"
+            multiple
+            disabled={uploadFile.isPending}
+            onChange={(event) => {
+              // Uploaded one at a time so a rejected file names itself rather
+              // than failing a batch with no indication of which one.
+              for (const file of event.target.files ?? []) uploadFile.mutate(file);
+              // Cleared so choosing the same file twice still fires.
+              if (fileInput.current) fileInput.current.value = "";
+            }}
+            data-testid="attach-file"
+          />
+          <span className="field__hint">
+            1つあたり25MBまで。PDF・画像・Office 文書・CSV などに対応しています。
+          </span>
+        </div>
+
+        {uploadFile.isPending && (
+          <p className="muted" data-testid="uploading">
+            アップロード中…
+          </p>
+        )}
+
+        {attached.length > 0 && (
+          <ul className="chat__pending" data-testid="pending-attachments">
+            {attached.map((attachment) => (
+              <li key={attachment.id} className="chat__pending-item">
+                <span className="chat__pending-name">{attachment.name}</span>
+                <span className="chat__attachment-size">
+                  {formatBytes(attachment.byteSize)}
+                </span>
+                <button
+                  type="button"
+                  className="button button--quiet"
+                  onClick={() =>
+                    setAttached((current) =>
+                      current.filter((a) => a.id !== attachment.id),
+                    )
+                  }
+                  data-testid={`remove-attachment-${attachment.name}`}
+                >
+                  取り消す
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <div className="form__actions">
           <button
             type="submit"
             className="button button--primary"
-            disabled={sendMessage.isPending || text.trim() === ""}
+            disabled={
+              sendMessage.isPending ||
+              uploadFile.isPending ||
+              (text.trim() === "" && attached.length === 0)
+            }
             data-testid="send-message"
           >
             {sendMessage.isPending ? "送信中…" : "送信"}
           </button>
         </div>
       </form>
+
+      {uploadFile.isError && (
+        <p className="alert alert--error alert--inline" data-testid="upload-error">
+          {errorMessage(uploadFile.error)}
+        </p>
+      )}
 
       {ambiguous.length > 0 && (
         <p className="alert alert--error alert--inline" data-testid="ambiguous-mention">

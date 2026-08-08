@@ -82,7 +82,34 @@ export const MessageAttachment = Type.Object({
   contentType: Type.String(),
   byteSize: Type.Integer(),
   url: Type.String(),
+  /**
+   * Safe to show in the conversation rather than only as a download. True only
+   * for formats whose bytes the server verified and which cannot carry script —
+   * never for SVG, which is not accepted at all.
+   */
+  inline: Type.Boolean(),
 });
+export type MessageAttachment = Static<typeof MessageAttachment>;
+
+/**
+ * The answer to an upload, before the message that will carry it exists.
+ *
+ * Uploading and sending are separate on purpose: a file starts moving while
+ * the message is still being typed, and one that is too large or of the wrong
+ * kind is refused then rather than when the send button is finally pressed.
+ */
+export const UploadAttachmentResponse = Type.Object(
+  {
+    id: Uuid,
+    name: Type.String(),
+    contentType: Type.String(),
+    byteSize: Type.Integer(),
+    url: Type.String(),
+    inline: Type.Boolean(),
+  },
+  { $id: "UploadAttachmentResponse" },
+);
+export type UploadAttachmentResponse = Static<typeof UploadAttachmentResponse>;
 
 export const Message = Type.Object(
   {
@@ -121,16 +148,18 @@ export const ListMessagesResponse = Type.Object(
 export type ListMessagesResponse = Static<typeof ListMessagesResponse>;
 
 /**
- * Attachments are not in this release.
+ * Files are uploaded first and claimed here.
  *
- * The tables exist and messages carry an (always empty) attachment list, but
- * there is no upload endpoint yet — file handling needs the validation and
- * storage rules in M6 before it is safe to accept uploads.
+ * An id that cannot be claimed — somebody else's upload, a different channel,
+ * one already sent — fails the whole send with 422. Dropping the attachment
+ * and delivering the message would be the product's own worst case: a report
+ * that says it worked while the thing anybody cared about is missing.
  */
 export const SendMessageRequest = Type.Object(
   {
     body: MessageBody,
     replyToId: Type.Optional(Uuid),
+    attachmentIds: Type.Optional(Type.Array(Uuid, { maxItems: 10 })),
   },
   { $id: "SendMessageRequest" },
 );
@@ -192,5 +221,20 @@ export const ChatErrorCode = {
   CANNOT_MESSAGE_SELF: "CANNOT_MESSAGE_SELF",
   /** The message being replied to is in another channel. */
   REPLY_ACROSS_CHANNELS: "REPLY_ACROSS_CHANNELS",
+
+  /** The extension is not on the allow-list. */
+  ATTACHMENT_TYPE_NOT_ALLOWED: "ATTACHMENT_TYPE_NOT_ALLOWED",
+  /** The bytes are not what the extension claims — a renamed file. */
+  ATTACHMENT_CONTENT_MISMATCH: "ATTACHMENT_CONTENT_MISMATCH",
+  /** Over 25 MiB, or empty. */
+  ATTACHMENT_TOO_LARGE: "ATTACHMENT_TOO_LARGE",
+  ATTACHMENT_EMPTY: "ATTACHMENT_EMPTY",
+  /** No usable filename in the Content-Disposition header. */
+  ATTACHMENT_NAME_INVALID: "ATTACHMENT_NAME_INVALID",
+  /**
+   * An attachment id that cannot be attached to this message: uploaded by
+   * somebody else, uploaded to a different channel, already sent, or expired.
+   */
+  ATTACHMENT_NOT_CLAIMABLE: "ATTACHMENT_NOT_CLAIMABLE",
 } as const;
 export type ChatErrorCode = (typeof ChatErrorCode)[keyof typeof ChatErrorCode];

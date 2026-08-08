@@ -33,6 +33,7 @@ export {
   OpenDirectRequest,
   RealtimeEvent,
   SendMessageRequest,
+  UploadAttachmentResponse,
 } from "./chat.js";
 
 export {

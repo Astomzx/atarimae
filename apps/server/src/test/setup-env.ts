@@ -5,6 +5,7 @@
  * development database and wipe it.
  */
 import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,3 +26,12 @@ if (!testUrl) {
 process.env["DATABASE_URL"] = testUrl;
 process.env["NODE_ENV"] = "test";
 process.env["LOG_LEVEL"] = "error";
+
+/**
+ * Uploads go to a temporary directory, never into the working tree.
+ *
+ * Set here rather than per test file for the same reason as the database
+ * above: a suite that writes attachments into `var/` on one developer's
+ * machine and not another's is a difference nobody notices until it matters.
+ */
+process.env["ATTACHMENT_ROOT"] = join(tmpdir(), "atarimae-test-attachments");

@@ -797,13 +797,17 @@ body {
 }
 
 /*
- * Stays reachable while reading back through a long conversation, without a
- * fixed-height inner scroller — the page scrolls the way every other page here
- * scrolls, which is also what keeps a phone keyboard from covering the input.
+ * In the flow of the page, not stuck to the bottom of the viewport.
+ *
+ * It was sticky, and on a phone it covered the conversation it belonged to:
+ * the composer grew a file picker, and the messages underneath became
+ * unreachable — a tap meant for a message landed on the composer instead.
+ * A bar pinned over the content is a promise that the content is short.
+ *
+ * The page scrolls to the newest message on arrival, so the composer is in
+ * view exactly when there is something to answer.
  */
 .chat__composer {
-  position: sticky;
-  bottom: 0;
   margin-top: 1rem;
   padding: 1rem 0 0;
   background: var(--bg);
@@ -826,5 +830,78 @@ body {
 
 .chat__replying-body {
   color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ----------------------------------------------------- chat attachments -- */
+
+.chat__attachments,
+.chat__pending {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chat__attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+/*
+ * Bounded rather than full width. A photograph from a phone is several
+ * thousand pixels wide, and one that fills the screen pushes the conversation
+ * off it.
+ */
+.chat__image {
+  max-width: min(100%, 22rem);
+  max-height: 18rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.chat__attachment-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.88rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.chat__attachment-link:hover {
+  border-color: var(--accent);
+}
+
+.chat__attachment-size {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Files chosen but not yet sent — removable until the message goes. */
+.chat__pending-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+}
+
+.chat__pending-name {
   overflow-wrap: anywhere;
 }

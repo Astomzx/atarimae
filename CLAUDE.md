@@ -89,30 +89,32 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State              |
-| ---------------------------------------------------------------- | ------------------ |
-| M0 foundation                                                    | done               |
-| M1 accounts, org units, permissions                              | done               |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done               |
-| M3a chat                                                         | done               |
-| M4 PWA + Tauri                                                   | not started        |
-| M5 open API, webhooks, call providers                            | 通話 provider left |
-| M6a security, attachments, backup/restore                        | attachments done   |
-| M6b documentation, screenshots, release                          | not started        |
+| Milestone                                                        | State            |
+| ---------------------------------------------------------------- | ---------------- |
+| M0 foundation                                                    | done             |
+| M1 accounts, org units, permissions                              | done             |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
+| M3a chat                                                         | done             |
+| M4 PWA + Tauri                                                   | not started      |
+| M5 open API, webhooks, 通話 providers                            | done             |
+| M6a security, attachments, backup/restore                        | attachments done |
+| M6b documentation, screenshots, release                          | not started      |
 
-320 server unit tests, 40 web unit tests, 130 E2E, 9 migrations. CI green.
+350 server unit tests, 40 web unit tests, 144 E2E, 10 migrations. CI green.
 
 ## Suggested order from here
 
-1. **The rest of M5** — the 通話 (call) providers: a generic URL/HTTP provider
-   so any telephony vendor can be configured without the product naming one.
-   Service accounts, API tokens and webhooks are done; see
-   `docs/architecture/service-accounts.md` and `docs/architecture/webhooks.md`.
-2. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
+1. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
    installed on this machine.**
-3. **The rest of M6a** — backup/restore, and the security pass. Attachments are
+2. **The rest of M6a** — backup/restore, and the security pass. Attachments are
    done; see `docs/architecture/attachments.md`.
-4. **M6b** — three-language README, screenshots, demo video, release.
+3. **M6b** — three-language README, screenshots, demo video, release.
+
+**通話 is network calls, not telephone calls** — and both one-to-one and group
+calls, from the same mechanism: a call belongs to a channel, and a channel is
+either a conversation or a group. The provider carries the media; Atarimae
+carries everything else. `docs/architecture/calls.md` says what that buys and
+what it costs.
 
 **`users.kind` is now a thing.** Any new query that means "people" must say
 `kind = 'person'`; service accounts are rows in the same table. The three
@@ -154,6 +156,8 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   token, and what a leaked token still cannot do
 - `docs/architecture/webhooks.md` — why delivery is an outbox, why the timestamp
   is signed with the body, and where a webhook may not point
+- `docs/architecture/calls.md` — what Atarimae refuses to carry, and why a call
+  provider may point inside the network when a webhook may not
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.

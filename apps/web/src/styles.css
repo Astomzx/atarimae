@@ -953,3 +953,64 @@ body {
 .badge--member {
   border-color: var(--border);
 }
+
+/* ----------------------------------------------------------------- calls -- */
+
+/*
+ * Somebody is waiting for an answer right now, so it sits above the content at
+ * every width rather than inside the chat screens. A call you only find out
+ * about by opening the right conversation is not a call.
+ */
+.ringing {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.ringing__text {
+  font-size: 0.95rem;
+}
+
+.ringing__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ringing .button {
+  background: var(--surface);
+  border-color: var(--surface);
+  color: var(--text);
+}
+
+.call-panel {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.call-panel__live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--ok);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+
+.call-panel__label {
+  font-weight: 600;
+  color: var(--ok);
+  font-size: 0.9rem;
+}

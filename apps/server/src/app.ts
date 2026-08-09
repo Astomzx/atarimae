@@ -17,6 +17,7 @@ import { registerRealtime } from "./plugins/realtime.js";
 import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
+import { callRoutes } from "./routes/calls.js";
 import { chatRoutes } from "./routes/chat.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
@@ -222,6 +223,7 @@ export async function buildApp({
       await api.register(announcementRoutes);
       await api.register(announcementCsvRoutes);
       await api.register(chatRoutes);
+      await api.register(callRoutes);
       await api.register(serviceAccountRoutes);
       await api.register(webhookRoutes);
       await api.register(settingsRoutes);

@@ -206,6 +206,26 @@ export const RealtimeEvent = Type.Union([
     channelId: Uuid,
     lastReadMessageId: Uuid,
   }),
+  /**
+   * A call is ringing in this channel.
+   *
+   * This is the one event where best-effort delivery is felt: somebody is
+   * waiting for an answer right now, and a client that missed it finds out on
+   * its next fetch instead. That is why the channel list also carries the live
+   * call — the socket makes it immediate, it does not make it true.
+   */
+  Type.Object({
+    type: Type.Literal("call.started"),
+    channelId: Uuid,
+    callId: Uuid,
+    startedBy: Uuid,
+    startedByName: Type.String(),
+  }),
+  Type.Object({
+    type: Type.Literal("call.ended"),
+    channelId: Uuid,
+    callId: Uuid,
+  }),
   Type.Object({ type: Type.Literal("ping") }),
 ]);
 export type RealtimeEvent = Static<typeof RealtimeEvent>;

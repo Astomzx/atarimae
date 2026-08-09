@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
 import { sweepUnclaimedAttachments } from "./attachment-sweep.js";
+import { endAbandonedCalls } from "./call-sweep.js";
 import { createMailer, loadSmtpSettings } from "./mailer.js";
 import { drainOutbox, reclaimStaleLocks } from "./notification-worker.js";
 import { queueDueReminders } from "./reminders.js";
@@ -90,6 +91,15 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
       }
     } catch (error) {
       app.log.error({ err: error }, "failed to sweep unclaimed attachments");
+    }
+
+    // A closed laptop is not somebody leaving a call. Without this the channel
+    // shows 通話中 forever and can never start another.
+    try {
+      const ended = await endAbandonedCalls(app.db);
+      if (ended > 0) app.log.info({ ended }, "ended abandoned calls");
+    } catch (error) {
+      app.log.error({ err: error }, "failed to end abandoned calls");
     }
 
     // A worker that died mid-delivery leaves rows locked forever, and the

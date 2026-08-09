@@ -30,6 +30,7 @@ import {
   type MessagePages,
 } from "../chat/format.js";
 import { chatKeys } from "../chat/keys.js";
+import { useEnterCall } from "../chat/useEnterCall.js";
 
 /**
  * One conversation.
@@ -156,6 +157,8 @@ function ChannelPage({ channelId }: { channelId: string }) {
         </p>
       )}
 
+      {channel?.isMember && <CallPanel channelId={channelId} />}
+
       {messages.isError && (
         <p className="alert alert--error">{errorMessage(messages.error)}</p>
       )}
@@ -217,6 +220,135 @@ function ChannelPage({ channelId }: { channelId: string }) {
       {channel !== null && !channel.isMember && <JoinNotice channelId={channelId} />}
     </div>
   );
+}
+
+/**
+ * 通話 — a call in this conversation.
+ *
+ * Atarimae is not carrying the audio: the provider's room opens in its own
+ * window. Embedding it would mean a vendor's SDK on every page, which is
+ * exactly the lock-in that a configurable provider exists to avoid.
+ */
+function CallPanel({ channelId }: { channelId: string }) {
+  const queryClient = useQueryClient();
+  const { user } = useSession();
+  const [error, setError] = useState<string | null>(null);
+
+  const calls = useQuery({
+    queryKey: chatKeys.calls(channelId),
+    queryFn: () => api.calls.inChannel(channelId),
+  });
+
+  const live = calls.data?.items.find((call) => call.endedAt === null) ?? null;
+  const past = (calls.data?.items ?? []).filter((call) => call.endedAt !== null);
+
+  /**
+   * Whether this person is on the call right now.
+   *
+   * Without a way to leave, the last participant never leaves — and since one
+   * channel may hold only one live call, the conversation is stuck showing
+   * 通話中 with nobody in it and no way to start another.
+   */
+  const onTheCall =
+    live?.participants.some((p) => p.userId === user?.id && p.leftAt === null) ?? false;
+
+  const leave = useMutation({
+    mutationFn: (callId: string) => api.calls.leave(callId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: chatKeys.calls(channelId) });
+    },
+  });
+
+  const enter = useEnterCall();
+
+  const go = (callId?: string) => {
+    setError(null);
+    enter.mutate(
+      { channelId, ...(callId ? { callId } : {}) },
+      { onError: (failure) => setError(errorMessage(failure)) },
+    );
+  };
+
+  return (
+    <section className="call-panel">
+      {live ? (
+        <div className="call-panel__live" data-testid="live-call">
+          <span className="call-panel__label">
+            通話中 ・ {live.participants.filter((p) => p.leftAt === null).length} 名
+          </span>
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => go(live.id)}
+            disabled={enter.isPending}
+            data-testid="join-call"
+          >
+            {onTheCall ? "通話に戻る" : "通話に参加"}
+          </button>
+          {onTheCall && (
+            <button
+              type="button"
+              className="button button--quiet"
+              onClick={() => leave.mutate(live.id)}
+              disabled={leave.isPending}
+              data-testid="leave-call"
+            >
+              退出
+            </button>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="button"
+          onClick={() => go()}
+          disabled={enter.isPending}
+          data-testid="start-call"
+        >
+          {enter.isPending ? "接続中…" : "通話を開始"}
+        </button>
+      )}
+
+      {error && (
+        <p className="alert alert--error alert--inline" data-testid="call-error">
+          {error}
+        </p>
+      )}
+
+      {/*
+       * The history. Who joined is the difference between a call that happened
+       * and one that rang out, and that is the thing anybody wants to know
+       * afterwards.
+       */}
+      {past.length > 0 && (
+        <ul className="list list--flush" data-testid="call-history">
+          {past.slice(0, 5).map((call) => (
+            <li key={call.id} className="list__item">
+              <div className="list__main">
+                <span className="list__meta">
+                  {formatTime(call.startedAt)} ・{" "}
+                  {call.participants.length > 1
+                    ? `${call.participants.length} 名が参加`
+                    : "応答なし"}
+                  {call.endedAt && ` ・ ${callDuration(call.startedAt, call.endedAt)}`}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function callDuration(startedAt: string, endedAt: string): string {
+  const seconds = Math.max(
+    0,
+    Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+  );
+
+  if (seconds < 60) return `${seconds} 秒`;
+  return `${Math.round(seconds / 60)} 分`;
 }
 
 function JoinNotice({ channelId }: { channelId: string }) {

@@ -98,6 +98,18 @@ export {
 } from "./announcements.js";
 
 export {
+  Call,
+  CallErrorCode,
+  CallParticipant,
+  CallProvider,
+  CallProviderKind,
+  CreateCallProviderRequest,
+  JoinCallResponse,
+  ListCallProvidersResponse,
+  ListCallsResponse,
+} from "./calls.js";
+
+export {
   CreateWebhookRequest,
   CreateWebhookResponse,
   ListWebhookDeliveriesResponse,

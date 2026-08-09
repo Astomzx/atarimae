@@ -1,9 +1,10 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { NavLink, Outlet } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { api } from "../api.js";
 import { hasAtLeast, ROLE_LABEL, useSession } from "../auth.js";
-import { chatKeys } from "../chat/keys.js";
+import { chatKeys, type IncomingCall } from "../chat/keys.js";
+import { useEnterCall } from "../chat/useEnterCall.js";
 import { useRealtime } from "../chat/useRealtime.js";
 
 /**
@@ -23,7 +24,7 @@ export function Layout() {
    * arriving while you are reading an announcement is never noticed, and the
    * unread badge below would be wrong exactly when it matters.
    */
-  useRealtime();
+  useRealtime(user?.id ?? null);
 
   const channels = useQuery({
     queryKey: chatKeys.channels(),
@@ -121,9 +122,78 @@ export function Layout() {
         </div>
       </header>
 
+      <IncomingCallBanner />
+
       <main className="content">
         <Outlet />
       </main>
+    </div>
+  );
+}
+
+/**
+ * Somebody is calling, and they are waiting for an answer now.
+ *
+ * At the top of every screen rather than inside the chat pages: a call you
+ * only find out about by having the right conversation open is not a call.
+ * Dismissing it stops the ringing here and does nothing to the call itself —
+ * the others carry on, and it can still be joined from the channel.
+ */
+function IncomingCallBanner() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const enter = useEnterCall();
+
+  const { data: incoming } = useQuery<IncomingCall | null>({
+    queryKey: chatKeys.incomingCall(),
+    // Never fetched: the socket writes it, and these two say so.
+    queryFn: () => null,
+    enabled: false,
+    initialData: null,
+  });
+
+  if (!incoming) return null;
+
+  const dismiss = () =>
+    queryClient.setQueryData<IncomingCall | null>(chatKeys.incomingCall(), null);
+
+  return (
+    <div className="ringing" role="alert" data-testid="incoming-call">
+      <span className="ringing__text">
+        <strong>{incoming.startedByName}</strong> さんが通話を開始しました
+      </span>
+      <span className="ringing__actions">
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={() => {
+            // Actually joins, and then shows the conversation it is in. A
+            // button that says 参加する and only navigates somewhere is a
+            // button that lies — they pressed it to be in the call.
+            enter.mutate(
+              { channelId: incoming.channelId, callId: incoming.callId },
+              {
+                onSettled: () => {
+                  dismiss();
+                  void navigate(`/chat/${incoming.channelId}`);
+                },
+              },
+            );
+          }}
+          disabled={enter.isPending}
+          data-testid="answer-call"
+        >
+          {enter.isPending ? "接続中…" : "参加する"}
+        </button>
+        <button
+          type="button"
+          className="button button--quiet"
+          onClick={dismiss}
+          data-testid="dismiss-call"
+        >
+          閉じる
+        </button>
+      </span>
     </div>
   );
 }

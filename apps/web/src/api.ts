@@ -4,8 +4,10 @@ import type {
   AnnouncementSummary,
   AnnouncementTarget,
   AuthenticatedUser,
+  CallProvider,
   CommandSummary,
   CreateAnnouncementRequest,
+  CreateCallProviderRequest,
   CreateApiTokenRequest,
   CreateApiTokenResponse,
   CreateChannelRequest,
@@ -18,12 +20,15 @@ import type {
   ErrorResponse,
   HealthResponse,
   ListApiTokensResponse,
+  ListCallProvidersResponse,
+  ListCallsResponse,
   ListChannelMembersResponse,
   ListChannelsResponse,
   ListMessagesResponse,
   ListServiceAccountsResponse,
   ListWebhookDeliveriesResponse,
   ListWebhooksResponse,
+  JoinCallResponse,
   LoginRequest,
   Message,
   MyAnnouncement,
@@ -297,6 +302,26 @@ export const api = {
       send<void>("DELETE", `/service-accounts/${id}/tokens/${tokenId}`),
   },
 
+  /**
+   * 通話. Atarimae holds who and when; the media belongs to a provider an
+   * administrator configured.
+   */
+  calls: {
+    providers: () => request<ListCallProvidersResponse>("/call-providers"),
+    createProvider: (input: CreateCallProviderRequest) =>
+      send<CallProvider>("POST", "/call-providers", input),
+    disableProvider: (id: string) =>
+      send<CallProvider>("POST", `/call-providers/${id}/disable`),
+
+    inChannel: (channelId: string) =>
+      request<ListCallsResponse>(`/channels/${channelId}/calls`),
+    start: (channelId: string) =>
+      send<JoinCallResponse>("POST", `/channels/${channelId}/calls`),
+    /** The only place a join URL is handed out, after re-checking membership. */
+    join: (callId: string) => send<JoinCallResponse>("POST", `/calls/${callId}/join`),
+    leave: (callId: string) => send<void>("POST", `/calls/${callId}/leave`),
+  },
+
   webhooks: {
     list: () => request<ListWebhooksResponse>("/webhooks"),
     create: (input: CreateWebhookRequest) =>
@@ -367,6 +392,13 @@ const MESSAGES: Record<string, string> = {
   WEBHOOK_URL_NOT_REACHABLE:
     "社内アドレス（localhost・127.0.0.1・10.x など）は指定できません。外部から到達できる URL を指定してください。",
   WEBHOOK_URL_HAS_CREDENTIALS: "URL にユーザー名やパスワードを含めることはできません。",
+  NO_CALL_PROVIDER:
+    "通話サービスが設定されていません。管理者が「連携」画面で設定してください。",
+  CALL_PROVIDER_FAILED: "通話サービスに接続できませんでした。設定を確認してください。",
+  CALL_PROVIDER_TEMPLATE_INVALID:
+    "会議室 URL は http または https で、{room} を含む必要があります。",
+  CALL_PROVIDER_INCOMPLETE: "通話サービスの設定が不完全です。",
+  CALL_ALREADY_ENDED: "この通話は既に終了しています。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

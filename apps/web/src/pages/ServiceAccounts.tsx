@@ -59,7 +59,189 @@ export function ServiceAccountsPage() {
       )}
 
       <Webhooks />
+      <CallProviders />
     </div>
+  );
+}
+
+/**
+ * Where calls are held.
+ *
+ * Atarimae does not carry the audio — running an SFU is a product of its own —
+ * so an office points this at whatever it already has. A self-hosted Jitsi
+ * needs nothing but a URL template.
+ */
+function CallProviders() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [urlTemplate, setUrlTemplate] = useState("");
+
+  const providers = useQuery({
+    queryKey: ["call-providers"],
+    queryFn: api.calls.providers,
+  });
+
+  const create = useMutation({
+    mutationFn: () =>
+      api.calls.createProvider({
+        name: name.trim(),
+        kind: "url",
+        urlTemplate: urlTemplate.trim(),
+        isDefault: true,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["call-providers"] });
+      setName("");
+      setUrlTemplate("");
+      setOpen(false);
+    },
+  });
+
+  const disable = useMutation({
+    mutationFn: api.calls.disableProvider,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["call-providers"] }),
+  });
+
+  const items = (providers.data?.items ?? []).filter(
+    (provider) => provider.disabledAt === null,
+  );
+
+  return (
+    <section>
+      <h2 className="section__title">通話</h2>
+      <p className="muted">
+        通話の音声・映像は Atarimae では扱いません。社内の Jitsi
+        など、既にあるサービスを指定してください。
+        {/*
+         * Stated rather than implied: this is why the office can keep its
+         * calls inside its own network if it wants to.
+         */}
+        指定先は社内アドレスでも構いません。
+      </p>
+
+      {!open && (
+        <p className="toggle">
+          <button
+            type="button"
+            className="button"
+            onClick={() => setOpen(true)}
+            data-testid="toggle-create-call-provider"
+          >
+            通話サービスを設定
+          </button>
+        </p>
+      )}
+
+      {open && (
+        <section className="card">
+          <h3 className="card__title">通話サービスを設定</h3>
+
+          <form
+            className="form form--grid"
+            onSubmit={(event) => {
+              event.preventDefault();
+              create.mutate();
+            }}
+          >
+            <label className="field">
+              <span className="field__label">名前</span>
+              <input
+                className="field__input"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="社内 Jitsi"
+                required
+                data-testid="new-call-provider-name"
+              />
+            </label>
+
+            <label className="field">
+              <span className="field__label">会議室 URL</span>
+              <input
+                className="field__input"
+                value={urlTemplate}
+                onChange={(event) => setUrlTemplate(event.target.value)}
+                placeholder="https://meet.example.com/{room}"
+                required
+                data-testid="new-call-provider-url"
+              />
+              <span className="field__hint">
+                {"{room}"} は通話ごとに生成された部屋名に置き換わります。
+                これがないと、すべての通話が同じ部屋になってしまいます。
+              </span>
+            </label>
+
+            <div className="form__actions">
+              <button
+                type="submit"
+                className="button button--primary"
+                disabled={create.isPending || name.trim() === "" || urlTemplate === ""}
+                data-testid="create-call-provider-submit"
+              >
+                {create.isPending ? "保存中…" : "保存"}
+              </button>
+              <button
+                type="button"
+                className="button button--quiet"
+                onClick={() => setOpen(false)}
+              >
+                閉じる
+              </button>
+            </div>
+          </form>
+
+          {create.isError && (
+            <p
+              className="alert alert--error alert--inline"
+              data-testid="create-call-provider-error"
+            >
+              {errorMessage(create.error)}
+            </p>
+          )}
+        </section>
+      )}
+
+      {providers.isSuccess && items.length === 0 && (
+        <p className="muted" data-testid="no-call-providers">
+          通話サービスは未設定です。設定するまで通話は開始できません。
+        </p>
+      )}
+
+      {items.length > 0 && (
+        <ul className="list" data-testid="call-provider-list">
+          {items.map((provider) => (
+            <li key={provider.id} className="list__item">
+              <div className="list__main">
+                <span className="list__title">{provider.name}</span>
+                <span className="list__meta">
+                  {provider.urlTemplate ?? provider.requestUrl}
+                </span>
+                <span className="list__tags">
+                  {provider.isDefault && (
+                    <span className="badge badge--current">既定</span>
+                  )}
+                  {provider.hasSecret && (
+                    <span className="badge badge--member">API キー設定済み</span>
+                  )}
+                </span>
+              </div>
+              <div className="list__actions">
+                <button
+                  type="button"
+                  className="button button--quiet"
+                  onClick={() => disable.mutate(provider.id)}
+                  disabled={disable.isPending}
+                  data-testid={`disable-call-provider-${provider.name}`}
+                >
+                  停止
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

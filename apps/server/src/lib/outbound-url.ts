@@ -109,7 +109,11 @@ const BLOCKED_HOSTNAMES = new Set([
   "ip6-loopback",
 ]);
 
-export function checkOutboundUrl(candidate: string): UrlAccepted | UrlRejected {
+/**
+ * The checks that apply wherever a URL is configured, regardless of who
+ * fetches it.
+ */
+function checkShape(candidate: string): UrlAccepted | UrlRejected {
   let url: URL;
   try {
     url = new URL(candidate);
@@ -122,11 +126,40 @@ export function checkOutboundUrl(candidate: string): UrlAccepted | UrlRejected {
   }
 
   // Some clients forward these as an Authorization header, which would send
-  // whoever configured the webhook's credentials to the endpoint.
+  // whoever configured it their own credentials.
   if (url.username !== "" || url.password !== "") {
     return { ok: false, reason: "CREDENTIALS_IN_URL" };
   }
 
+  return { ok: true, url: url.toString() };
+}
+
+/**
+ * A URL an administrator points at their own infrastructure.
+ *
+ * **Deliberately more permissive than `checkOutboundUrl`, and the difference
+ * is the point of the product.** A call provider is very often a self-hosted
+ * Jitsi on the office LAN at `10.0.0.20`. Refusing private addresses here
+ * would mean the only supported way to have calls is to send them through
+ * somebody else's cloud — which is the arrangement this project exists to
+ * argue with.
+ *
+ * A webhook is different: it points at a third party, and an address inside
+ * the network there is a request forger, so that one stays strict.
+ *
+ * What is left to lean on: this is administrator-only configuration, and the
+ * provider's response is never returned to the caller — only the join URL
+ * extracted from it.
+ */
+export function checkProviderUrl(candidate: string): UrlAccepted | UrlRejected {
+  return checkShape(candidate);
+}
+
+export function checkOutboundUrl(candidate: string): UrlAccepted | UrlRejected {
+  const shape = checkShape(candidate);
+  if (!shape.ok) return shape;
+
+  const url = new URL(shape.url);
   const host = url.hostname.toLowerCase();
 
   if (BLOCKED_HOSTNAMES.has(host) || host.endsWith(".localhost")) {

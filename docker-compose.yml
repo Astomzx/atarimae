@@ -22,7 +22,15 @@ services:
       # production agree on ORDER BY and unique index behaviour.
       POSTGRES_INITDB_ARGS: "--locale-provider=builtin --builtin-locale=C.UTF-8 --encoding=UTF8"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data.
+      #
+      # The 18+ images store data in a major-version-specific subdirectory so
+      # that `pg_upgrade --link` is not blocked by a mount-point boundary.
+      # Mounting the old path makes the container refuse to start: it finds
+      # data where it no longer expects any and stops rather than guessing.
+      # This project requires PostgreSQL 18, so the new layout is the only one
+      # that applies.
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atarimae}"]
       interval: 10s

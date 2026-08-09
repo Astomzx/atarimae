@@ -124,13 +124,13 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
-- **The Docker image has never been built.** Docker is not installed here, and
-  cannot be until somebody runs an elevated setup once: WSL2 and
-  VirtualMachinePlatform are both disabled on this machine, and enabling them
-  needs Administrator plus a reboot. Everything the image depends on that could
-  be checked without it is covered by `apps/server/src/static-hosting.test.ts`,
-  but `docker compose up -d --build` has never run. This is the last unverified
-  item in the v1.0 completion criteria.
+- **The Docker image builds and runs.** No longer a gap: Docker is installed
+  here now, `docker compose up -d --build` works from a clean checkout, both
+  containers reach healthy, all migrations apply inside the container and the
+  first Owner can be created. It found three real defects on the way —
+  `docs/engineering/docker-first-build.md`. Note that signing in needs TLS in
+  front: cookies are `Secure` under `NODE_ENV=production`, which is correct and
+  is what `docs/deployment/docker.md` describes.
 - **Attachments need a mounted volume in Docker.** `ATTACHMENT_ROOT` is a plain
   directory; `docker-compose.yml` declares the volume. Without it a rebuild
   destroys every uploaded file while the database keeps the rows pointing at
@@ -167,4 +167,6 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   doing nothing.
 - `docs/engineering/m3a-interface.md` — what building the chat interface found,
   and the hazards it was written against.
+- `docs/engineering/docker-first-build.md` — three defects the first-ever image
+  build found, including one that produced a healthy container with no tables.
 - `docs/architecture/decisions.md` — toolchain decisions and their reasons

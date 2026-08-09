@@ -32,6 +32,11 @@
     "check": "pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "prepare": "node -e \"process.exit(0)\""
   },
+  "//dependencies": "Migrations are run by the operator inside the container — `docker compose exec app node scripts/db.mjs up` — so the migration runner ships in the production image. As devDependencies they were pruned by the --prod install and that documented step failed with ERR_MODULE_NOT_FOUND.",
+  "dependencies": {
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.22.0"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.0",
@@ -39,8 +44,6 @@
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.0",
     "globals": "^17.9.0",
-    "node-pg-migrate": "^9.0.0",
-    "pg": "^8.22.0",
     "prettier": "^3.9.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.66.0",

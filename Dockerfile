@@ -11,6 +11,13 @@ FROM node:24-bookworm-slim AS build
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
+
+# The --prod reinstall below replaces node_modules, and pnpm asks before
+# removing a directory it did not create. There is no terminal in a build, so
+# it aborts with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY instead — which is
+# what the very first build of this image did.
+ENV CI=true
+
 RUN corepack enable
 
 WORKDIR /app

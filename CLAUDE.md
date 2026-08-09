@@ -104,8 +104,10 @@ twice inside one response breaks Fastify's serializer.
 
 ## Suggested order from here
 
-1. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
-   installed on this machine.**
+1. **M4** — PWA first, then Tauri. The PWA half needs no toolchain at all.
+   **Rust is now installed** (stable-msvc, on the data drive), but Tauri still
+   cannot link: the msvc target needs `link.exe` from the Visual Studio Build
+   Tools, and those need an elevated install. WebView2 is already present.
 2. **The rest of M6a** — backup/restore, and the security pass. Attachments are
    done; see `docs/architecture/attachments.md`.
 3. **M6b** — three-language README, screenshots, demo video, release.
@@ -122,11 +124,13 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
-- **The Docker image has never been built.** Docker is not installed here.
-  Everything the image depends on that could be checked without it is covered by
-  `apps/server/src/static-hosting.test.ts`, but `docker compose up -d --build`
-  has never run. This is the last unverified item in the v1.0 completion
-  criteria.
+- **The Docker image has never been built.** Docker is not installed here, and
+  cannot be until somebody runs an elevated setup once: WSL2 and
+  VirtualMachinePlatform are both disabled on this machine, and enabling them
+  needs Administrator plus a reboot. Everything the image depends on that could
+  be checked without it is covered by `apps/server/src/static-hosting.test.ts`,
+  but `docker compose up -d --build` has never run. This is the last unverified
+  item in the v1.0 completion criteria.
 - **Attachments need a mounted volume in Docker.** `ATTACHMENT_ROOT` is a plain
   directory; `docker-compose.yml` declares the volume. Without it a rebuild
   destroys every uploaded file while the database keeps the rows pointing at

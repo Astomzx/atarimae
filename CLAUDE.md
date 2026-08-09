@@ -89,25 +89,25 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State            |
-| ---------------------------------------------------------------- | ---------------- |
-| M0 foundation                                                    | done             |
-| M1 accounts, org units, permissions                              | done             |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
-| M3a chat                                                         | done             |
-| M4 PWA + Tauri                                                   | not started      |
-| M5 open API, webhooks, call providers                            | tokens done      |
-| M6a security, attachments, backup/restore                        | attachments done |
-| M6b documentation, screenshots, release                          | not started      |
+| Milestone                                                        | State              |
+| ---------------------------------------------------------------- | ------------------ |
+| M0 foundation                                                    | done               |
+| M1 accounts, org units, permissions                              | done               |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done               |
+| M3a chat                                                         | done               |
+| M4 PWA + Tauri                                                   | not started        |
+| M5 open API, webhooks, call providers                            | 通話 provider left |
+| M6a security, attachments, backup/restore                        | attachments done   |
+| M6b documentation, screenshots, release                          | not started        |
 
-279 server unit tests, 40 web unit tests, 124 E2E, 8 migrations. CI green.
+320 server unit tests, 40 web unit tests, 130 E2E, 9 migrations. CI green.
 
 ## Suggested order from here
 
-1. **The rest of M5** — webhooks with HMAC signatures, then the 通話 (call)
-   providers: a generic URL/HTTP provider so any telephony vendor can be
-   configured without the product naming one. Service accounts and API tokens
-   are done; see `docs/architecture/service-accounts.md`.
+1. **The rest of M5** — the 通話 (call) providers: a generic URL/HTTP provider
+   so any telephony vendor can be configured without the product naming one.
+   Service accounts, API tokens and webhooks are done; see
+   `docs/architecture/service-accounts.md` and `docs/architecture/webhooks.md`.
 2. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
    installed on this machine.**
 3. **The rest of M6a** — backup/restore, and the security pass. Attachments are
@@ -152,6 +152,8 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   closes, and the limits stated plainly
 - `docs/architecture/service-accounts.md` — why an integration is not a person's
   token, and what a leaked token still cannot do
+- `docs/architecture/webhooks.md` — why delivery is an outbox, why the timestamp
+  is signed with the body, and where a webhook may not point
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.

@@ -32,6 +32,11 @@ export const AuditAction = {
   API_TOKEN_ISSUED: "api_token.issued",
   API_TOKEN_REVOKED: "api_token.revoked",
 
+  /** Records the URL and the events, never the signing secret. */
+  WEBHOOK_CREATED: "webhook.created",
+  WEBHOOK_DISABLED: "webhook.disabled",
+  WEBHOOK_RESTORED: "webhook.restored",
+
   ORG_UNIT_CREATED: "org_unit.created",
   ORG_UNIT_UPDATED: "org_unit.updated",
   ORG_UNIT_DISABLED: "org_unit.disabled",

@@ -10,6 +10,8 @@ import type {
   CreateApiTokenResponse,
   CreateChannelRequest,
   CreateServiceAccountRequest,
+  CreateWebhookRequest,
+  CreateWebhookResponse,
   CreateOrgUnitRequest,
   CreateOwnerRequest,
   CreateUserRequest,
@@ -20,6 +22,8 @@ import type {
   ListChannelsResponse,
   ListMessagesResponse,
   ListServiceAccountsResponse,
+  ListWebhookDeliveriesResponse,
+  ListWebhooksResponse,
   LoginRequest,
   Message,
   MyAnnouncement,
@@ -34,6 +38,7 @@ import type {
   SmtpSettingsResponse,
   UploadAttachmentResponse,
   UserSummary,
+  Webhook,
 } from "@atarimae/api-schema";
 
 const BASE = "/api/v1";
@@ -292,6 +297,16 @@ export const api = {
       send<void>("DELETE", `/service-accounts/${id}/tokens/${tokenId}`),
   },
 
+  webhooks: {
+    list: () => request<ListWebhooksResponse>("/webhooks"),
+    create: (input: CreateWebhookRequest) =>
+      send<CreateWebhookResponse>("POST", "/webhooks", input),
+    disable: (id: string) => send<Webhook>("POST", `/webhooks/${id}/disable`),
+    restore: (id: string) => send<Webhook>("POST", `/webhooks/${id}/restore`),
+    deliveries: (id: string) =>
+      request<ListWebhookDeliveriesResponse>(`/webhooks/${id}/deliveries`),
+  },
+
   orgUnits: {
     list: (includeDisabled = false) =>
       request<{ items: OrgUnit[] }>(
@@ -348,6 +363,10 @@ const MESSAGES: Record<string, string> = {
   NOT_A_SERVICE_ACCOUNT: "そのアカウントは担当者です。サービスアカウントではありません。",
   SERVICE_ACCOUNT_ROLE_INVALID:
     "サービスアカウントにオーナー権限は付与できません。管理者までです。",
+  WEBHOOK_URL_INVALID: "http または https で始まる URL を指定してください。",
+  WEBHOOK_URL_NOT_REACHABLE:
+    "社内アドレス（localhost・127.0.0.1・10.x など）は指定できません。外部から到達できる URL を指定してください。",
+  WEBHOOK_URL_HAS_CREDENTIALS: "URL にユーザー名やパスワードを含めることはできません。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

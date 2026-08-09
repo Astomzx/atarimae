@@ -98,6 +98,17 @@ export {
 } from "./announcements.js";
 
 export {
+  CreateWebhookRequest,
+  CreateWebhookResponse,
+  ListWebhookDeliveriesResponse,
+  ListWebhooksResponse,
+  Webhook,
+  WebhookDelivery,
+  WebhookErrorCode,
+  WebhookEvent,
+} from "./webhooks.js";
+
+export {
   ApiToken,
   CreateApiTokenRequest,
   CreateApiTokenResponse,

@@ -1,4 +1,9 @@
-import type { ApiToken, ServiceAccount } from "@atarimae/api-schema";
+import type {
+  ApiToken,
+  ServiceAccount,
+  Webhook,
+  WebhookEvent,
+} from "@atarimae/api-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -52,7 +57,327 @@ export function ServiceAccountsPage() {
           ))}
         </ul>
       )}
+
+      <Webhooks />
     </div>
+  );
+}
+
+/**
+ * The other direction: telling another system that something happened here.
+ *
+ * On the same screen because they are the same question from two sides — what
+ * is connected to this organisation, and how do we disconnect it.
+ */
+function Webhooks() {
+  const webhooks = useQuery({ queryKey: ["webhooks"], queryFn: api.webhooks.list });
+  const items = webhooks.data?.items ?? [];
+
+  return (
+    <section>
+      <h2 className="section__title">Webhook（送信）</h2>
+      <p className="muted">
+        公告の公開や確認を、外部システムへ HTTP で通知します。
+        届かなかった場合は自動で再送し、その記録もここに残ります。
+      </p>
+
+      <NewWebhook />
+
+      {webhooks.isPending && <p className="muted">読み込み中…</p>}
+      {webhooks.isError && (
+        <p className="alert alert--error">{errorMessage(webhooks.error)}</p>
+      )}
+
+      {webhooks.isSuccess && items.length === 0 && (
+        <p className="muted" data-testid="no-webhooks">
+          Webhook はまだ登録されていません。
+        </p>
+      )}
+
+      {items.length > 0 && (
+        <ul className="list" data-testid="webhook-list">
+          {items.map((webhook) => (
+            <WebhookRow key={webhook.id} webhook={webhook} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+const WEBHOOK_EVENTS: { value: WebhookEvent; label: string }[] = [
+  { value: "announcement.published", label: "公告の公開" },
+  { value: "announcement.acknowledged", label: "確認の記録" },
+  { value: "user.created", label: "メンバーの追加" },
+  { value: "user.disabled", label: "メンバーの停止" },
+];
+
+function NewWebhook() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [events, setEvents] = useState<WebhookEvent[]>(["announcement.published"]);
+
+  /** Shown once, exactly like an API token. */
+  const [secret, setSecret] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: () =>
+      api.webhooks.create({
+        url: url.trim(),
+        events,
+        ...(description.trim() ? { description: description.trim() } : {}),
+      }),
+    onSuccess: async (result) => {
+      setSecret(result.secret);
+      setUrl("");
+      setDescription("");
+      await queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    },
+  });
+
+  if (!open) {
+    return (
+      <p className="toggle">
+        <button
+          type="button"
+          className="button"
+          onClick={() => setOpen(true)}
+          data-testid="toggle-create-webhook"
+        >
+          Webhook を追加
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <section className="card">
+      <h3 className="card__title">Webhook を追加</h3>
+
+      {secret && (
+        <div className="token-reveal" data-testid="issued-secret">
+          <p className="token-reveal__label">
+            署名用のシークレットです。この画面を閉じると二度と表示できません。
+          </p>
+          <code className="token-reveal__value" data-testid="issued-secret-value">
+            {secret}
+          </code>
+          <p className="field__hint">
+            受信側では <code>X-Atarimae-Signature</code> を検証してください。
+            <code>t=&lt;unix秒&gt;,v1=&lt;hex&gt;</code> の hex は、
+            <code>&lt;t&gt;.&lt;本文&gt;</code> の HMAC-SHA256 です。
+            5分以上前のものは拒否してください。
+          </p>
+          <button
+            type="button"
+            className="button button--quiet"
+            onClick={() => setSecret(null)}
+            data-testid="dismiss-issued-secret"
+          >
+            コピーしました
+          </button>
+        </div>
+      )}
+
+      <form
+        className="form form--grid"
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate();
+        }}
+      >
+        <label className="field">
+          <span className="field__label">送信先 URL</span>
+          <input
+            className="field__input"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://example.com/hooks/atarimae"
+            required
+            data-testid="new-webhook-url"
+          />
+          {/*
+           * The server refuses private and loopback addresses. Saying so here
+           * turns a rejection into an expectation rather than a surprise.
+           */}
+          <span className="field__hint">
+            社内アドレス（localhost・127.0.0.1・10.x など）は指定できません。
+          </span>
+        </label>
+
+        <label className="field">
+          <span className="field__label">説明（任意）</span>
+          <input
+            className="field__input"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            maxLength={500}
+            data-testid="new-webhook-description"
+          />
+        </label>
+
+        <div className="field">
+          <span className="field__label">送信する出来事</span>
+          <div className="chips">
+            {WEBHOOK_EVENTS.map((event) => {
+              const on = events.includes(event.value);
+              return (
+                <button
+                  key={event.value}
+                  type="button"
+                  className={`chip${on ? " chip--on" : ""}`}
+                  onClick={() =>
+                    setEvents((current) =>
+                      on
+                        ? current.filter((value) => value !== event.value)
+                        : [...current, event.value],
+                    )
+                  }
+                  data-testid={`webhook-event-${event.value}`}
+                >
+                  {event.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="form__actions">
+          <button
+            type="submit"
+            className="button button--primary"
+            disabled={create.isPending || url.trim() === "" || events.length === 0}
+            data-testid="create-webhook-submit"
+          >
+            {create.isPending ? "登録中…" : "登録"}
+          </button>
+          <button
+            type="button"
+            className="button button--quiet"
+            onClick={() => setOpen(false)}
+          >
+            閉じる
+          </button>
+        </div>
+      </form>
+
+      {create.isError && (
+        <p
+          className="alert alert--error alert--inline"
+          data-testid="create-webhook-error"
+        >
+          {errorMessage(create.error)}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function WebhookRow({ webhook }: { webhook: Webhook }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const disabled = webhook.disabledAt !== null;
+
+  const setEnabled = useMutation({
+    mutationFn: (enable: boolean) =>
+      enable ? api.webhooks.restore(webhook.id) : api.webhooks.disable(webhook.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["webhooks"] }),
+  });
+
+  const deliveries = useQuery({
+    queryKey: ["webhooks", webhook.id, "deliveries"],
+    queryFn: () => api.webhooks.deliveries(webhook.id),
+    enabled: open,
+  });
+
+  return (
+    <li
+      className={`list__item${disabled ? " list__item--muted" : ""}`}
+      data-testid="webhook-row"
+    >
+      <div className="list__main">
+        <span className="list__title">{webhook.url}</span>
+        {webhook.description && <span className="list__meta">{webhook.description}</span>}
+        <span className="list__meta">
+          {webhook.events
+            .map((event) => WEBHOOK_EVENTS.find((e) => e.value === event)?.label ?? event)
+            .join(" ・ ")}
+        </span>
+        <span className="list__tags">
+          {disabled && <span className="badge badge--disabled">停止中</span>}
+          {webhook.consecutiveFailures > 0 && (
+            <span className="badge badge--mention" data-testid="webhook-failing">
+              連続失敗 {webhook.consecutiveFailures} 回
+            </span>
+          )}
+        </span>
+        {/*
+         * The last error is on the row rather than in a server log, because
+         * "did it arrive" should not require shell access to answer.
+         */}
+        {webhook.lastError && (
+          <span className="list__meta" data-testid="webhook-last-error">
+            直近のエラー: {webhook.lastError}
+          </span>
+        )}
+      </div>
+
+      <div className="list__actions">
+        <button
+          type="button"
+          className="button"
+          onClick={() => setOpen((current) => !current)}
+          data-testid="webhook-deliveries"
+        >
+          {open ? "閉じる" : "送信履歴"}
+        </button>
+        <button
+          type="button"
+          className="button button--quiet"
+          onClick={() => setEnabled.mutate(disabled)}
+          disabled={setEnabled.isPending}
+          data-testid="toggle-webhook"
+        >
+          {disabled ? "再開" : "停止"}
+        </button>
+      </div>
+
+      {open && (
+        <section className="token-panel">
+          {deliveries.isPending && <p className="muted">読み込み中…</p>}
+
+          {deliveries.isSuccess && deliveries.data.items.length === 0 && (
+            <p className="muted">送信履歴はまだありません。</p>
+          )}
+
+          {(deliveries.data?.items.length ?? 0) > 0 && (
+            <ul className="list list--flush" data-testid="delivery-list">
+              {deliveries.data!.items.map((delivery) => (
+                <li key={delivery.id} className="list__item">
+                  <div className="list__main">
+                    <span className="list__title">
+                      {WEBHOOK_EVENTS.find((e) => e.value === delivery.event)?.label ??
+                        delivery.event}
+                    </span>
+                    <span className="list__meta">
+                      {delivery.deliveredAt
+                        ? `送信済み ${formatDateTime(delivery.deliveredAt)}`
+                        : `未送信 ・ ${delivery.attemptCount} 回試行`}
+                      {delivery.lastStatus !== null && ` ・ HTTP ${delivery.lastStatus}`}
+                    </span>
+                    {delivery.lastError && (
+                      <span className="list__meta">{delivery.lastError}</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+    </li>
   );
 }
 

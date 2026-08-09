@@ -16,6 +16,7 @@ import { ApiError } from "../errors.js";
 import { AuditAction, writeAudit, writeAuditBestEffort } from "../lib/audit.js";
 import { hashPassword } from "../lib/password.js";
 import { waiveObligationsForUser } from "../services/obligations.js";
+import { enqueueWebhookEvent } from "../services/webhooks.js";
 import { requireAuth, requireRole } from "../plugins/auth.js";
 
 interface UserRow {
@@ -142,6 +143,15 @@ export const userRoutes: FastifyPluginAsyncTypebox = async (app) => {
           resourceType: "user",
           resourceId: userId,
           metadata: { email, role, primaryOrgUnitId: primaryOrgUnitId ?? null },
+        });
+
+        // For an HR system keeping its own list. Queued in this transaction so
+        // it can only describe an account that actually exists.
+        await enqueueWebhookEvent(client, "user.created", {
+          userId,
+          email,
+          displayName,
+          role,
         });
 
         return (await fetchUser(client, userId))!;
@@ -349,6 +359,11 @@ export const userRoutes: FastifyPluginAsyncTypebox = async (app) => {
           resourceType: "user",
           resourceId: userId,
           metadata: { obligationsWaived: waived },
+        });
+
+        await enqueueWebhookEvent(client, "user.disabled", {
+          userId,
+          obligationsWaived: waived,
         });
 
         return (await fetchUser(client, userId))!;

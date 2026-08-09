@@ -4,6 +4,7 @@ import type { DatabaseClient } from "../db.js";
 import { ApiError } from "../errors.js";
 import { assignObligations, emptySummary } from "./obligations.js";
 import { resolveTargetUsers } from "./targets.js";
+import { enqueueWebhookEvent } from "./webhooks.js";
 
 /**
  * Publishing.
@@ -78,8 +79,11 @@ export async function publishAnnouncement(
   }
 
   // The latest revision becomes the published one.
-  const { rows: revisions } = await client.query<{ id: string }>(
-    `SELECT id FROM announcement_content_revisions
+  // The title lives on the revision, not the announcement — it is part of the
+  // content that gets versioned. Carried into the webhook payload below so a
+  // receiver does not have to fetch it back.
+  const { rows: revisions } = await client.query<{ id: string; title: string }>(
+    `SELECT id, title FROM announcement_content_revisions
       WHERE announcement_id = $1
       ORDER BY version_no DESC
       LIMIT 1`,
@@ -178,6 +182,19 @@ export async function publishAnnouncement(
       }),
     ],
   );
+
+  /**
+   * Written in this same transaction, so a webhook is only ever queued for a
+   * publish that actually committed. Enqueuing after commit would eventually
+   * announce something a rollback removed.
+   */
+  await enqueueWebhookEvent(client, "announcement.published", {
+    announcementId,
+    title: revisions[0]!.title,
+    recipientsCreated,
+    obligationsCreated: obligations.createdCount,
+    publishedBy: actorUserId,
+  });
 
   return {
     recipientsCreated,

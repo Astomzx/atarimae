@@ -148,7 +148,70 @@ test.describe("M5: an integration of its own", () => {
     await expect(page.locator("body")).not.toContainText(ACCOUNT);
   });
 
-  test("7. revoking stops the very next request", async ({ page, request }) => {
+  /**
+   * The other direction. The interesting part is the refusal: a webhook the
+   * server fetches on its own network is a request forger, so an address
+   * inside the network is rejected before anything is stored.
+   */
+  test("7. a webhook is registered, and its secret shown once", async ({ page }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/service-accounts");
+
+    await expect(page.getByTestId("no-webhooks")).toBeVisible();
+    await page.getByTestId("toggle-create-webhook").click();
+
+    await page.getByTestId("new-webhook-url").fill("https://hooks.example.test/atarimae");
+    await page.getByTestId("webhook-event-announcement.acknowledged").click();
+    await page.getByTestId("create-webhook-submit").click();
+
+    const secret = page.getByTestId("issued-secret-value");
+    await expect(secret).toBeVisible();
+    expect(((await secret.textContent()) ?? "").startsWith("whsec_")).toBe(true);
+
+    await page.getByTestId("dismiss-issued-secret").click();
+    await expect(page.getByTestId("webhook-list")).toContainText(
+      "hooks.example.test/atarimae",
+    );
+  });
+
+  test("8. a webhook pointing inside the network is refused", async ({ page }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/service-accounts");
+
+    await page.getByTestId("toggle-create-webhook").click();
+    await page
+      .getByTestId("new-webhook-url")
+      .fill("http://169.254.169.254/latest/meta-data/");
+    await page.getByTestId("create-webhook-submit").click();
+
+    await expect(page.getByTestId("create-webhook-error")).toContainText("社内アドレス");
+  });
+
+  /**
+   * The queue is written in the same transaction as the publish, so the
+   * delivery exists whether or not anything is listening yet.
+   */
+  test("9. publishing queues a delivery, and the log says so", async ({ page }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+
+    await page.goto("/announcements");
+    await page.getByTestId("toggle-create-announcement").click();
+    await page.getByTestId("new-announcement-title").fill("配車連絡");
+    await page.getByTestId("new-announcement-body").fill("本日の配車です。");
+    await page.getByTestId("create-announcement-submit").click();
+    await page.getByRole("link", { name: "配車連絡" }).click();
+    await page.getByTestId("target-all").click();
+    await page.getByTestId("publish").click();
+    await expect(page.getByTestId("notice")).toContainText("公開しました");
+
+    await page.goto("/service-accounts");
+    await page.getByTestId("webhook-deliveries").click();
+
+    // Queued, and visible without anybody reading a server log.
+    await expect(page.getByTestId("delivery-list")).toContainText("公告の公開");
+  });
+
+  test("10. revoking stops the very next request", async ({ page, request }) => {
     await signIn(page, OWNER.email, OWNER.password);
     await page.goto("/service-accounts");
     await page.getByTestId(`tokens-${ACCOUNT}`).click();

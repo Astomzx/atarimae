@@ -32,6 +32,7 @@ import {
 } from "../services/obligations.js";
 import { publishAnnouncement } from "../services/publish.js";
 import { countTargetUsers } from "../services/targets.js";
+import { enqueueWebhookEvent } from "../services/webhooks.js";
 import { requireAuth, requireRole } from "../plugins/auth.js";
 
 interface AnnouncementRow {
@@ -932,13 +933,24 @@ export const announcementRoutes: FastifyPluginAsyncTypebox = async (app) => {
 
         // The unique index makes a double submission harmless rather than a
         // duplicate record.
-        await client.query(
+        const { rowCount } = await client.query(
           `INSERT INTO announcement_acknowledgements
              (obligation_id, client_type, device_id)
            VALUES ($1, $2, NULL)
            ON CONFLICT (obligation_id) DO NOTHING`,
           [obligation.id, clientType],
         );
+
+        // Only on the insert that actually recorded something. A second tap on
+        // a slow connection must not tell a subscriber it happened twice.
+        if (rowCount === 1) {
+          await enqueueWebhookEvent(client, "announcement.acknowledged", {
+            announcementId,
+            userId: user.id,
+            displayName: user.displayName,
+            clientType,
+          });
+        }
       });
 
       return reply.status(204).send(null);

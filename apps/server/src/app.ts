@@ -26,6 +26,7 @@ import { settingsRoutes } from "./routes/settings.js";
 import { startNotificationWorker } from "./services/worker-loop.js";
 import { setupRoutes } from "./routes/setup.js";
 import { userRoutes } from "./routes/users.js";
+import { webhookRoutes } from "./routes/webhooks.js";
 
 export const APP_VERSION = "0.0.0";
 
@@ -222,6 +223,7 @@ export async function buildApp({
       await api.register(announcementCsvRoutes);
       await api.register(chatRoutes);
       await api.register(serviceAccountRoutes);
+      await api.register(webhookRoutes);
       await api.register(settingsRoutes);
       await registerRealtime(api);
     },

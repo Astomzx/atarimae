@@ -4,6 +4,7 @@ import { sweepUnclaimedAttachments } from "./attachment-sweep.js";
 import { createMailer, loadSmtpSettings } from "./mailer.js";
 import { drainOutbox, reclaimStaleLocks } from "./notification-worker.js";
 import { queueDueReminders } from "./reminders.js";
+import { deliverPendingWebhooks, reclaimStaleWebhookLocks } from "./webhooks.js";
 
 /**
  * Background delivery.
@@ -53,6 +54,14 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
           "notifications are queued but SMTP is not configured",
         );
       }
+
+      // Same pass, same reasoning: a webhook queued in a committed transaction
+      // describes something that definitely happened, so it is retried until
+      // it lands rather than dropped when an endpoint is briefly down.
+      const webhooks = await deliverPendingWebhooks(app.db, app.secrets);
+      if (webhooks.claimed > 0) {
+        app.log.info({ ...webhooks }, "webhook deliveries attempted");
+      }
     } catch (error) {
       app.log.error({ err: error }, "notification worker tick failed");
     } finally {
@@ -81,6 +90,17 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
       }
     } catch (error) {
       app.log.error({ err: error }, "failed to sweep unclaimed attachments");
+    }
+
+    // A worker that died mid-delivery leaves rows locked forever, and the
+    // queue stops moving with nothing in it marked as failed.
+    try {
+      const released = await reclaimStaleWebhookLocks(app.db);
+      if (released > 0) {
+        app.log.warn({ released }, "released webhook deliveries locked by a dead worker");
+      }
+    } catch (error) {
+      app.log.error({ err: error }, "failed to reclaim stale webhook locks");
     }
   };
 

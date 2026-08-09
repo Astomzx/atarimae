@@ -98,6 +98,18 @@ export {
 } from "./announcements.js";
 
 export {
+  ApiToken,
+  CreateApiTokenRequest,
+  CreateApiTokenResponse,
+  CreateServiceAccountRequest,
+  ListApiTokensResponse,
+  ListServiceAccountsResponse,
+  ServiceAccount,
+  ServiceAccountErrorCode,
+  ServiceAccountRole,
+} from "./service-accounts.js";
+
+export {
   AssignOrgUnitRequest,
   CreateOrgUnitRequest,
   ListOrgUnitsQuery,

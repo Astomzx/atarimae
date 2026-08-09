@@ -171,7 +171,11 @@ export const userRoutes: FastifyPluginAsyncTypebox = async (app) => {
 
       const wantsDisabled = includeDisabled === true && actor.role !== "member";
 
-      const conditions: string[] = ["u.anonymized_at IS NULL"];
+      // The member directory is people. Service accounts are rows in the same
+      // table, and listing them here would put a robot in the member picker,
+      // the mention list and the "start a conversation" chips — everywhere a
+      // colleague is expected. They have their own screen.
+      const conditions: string[] = ["u.anonymized_at IS NULL", "u.kind = 'person'"];
       const params: unknown[] = [];
 
       if (!wantsDisabled) conditions.push("u.disabled_at IS NULL");

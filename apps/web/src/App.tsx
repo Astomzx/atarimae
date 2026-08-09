@@ -11,6 +11,7 @@ import { MyAnnouncementsPage } from "./pages/MyAnnouncements.js";
 import { LoginPage } from "./pages/Login.js";
 import { MembersPage } from "./pages/Members.js";
 import { OrgUnitsPage } from "./pages/OrgUnits.js";
+import { ServiceAccountsPage } from "./pages/ServiceAccounts.js";
 import { SessionsPage } from "./pages/Sessions.js";
 import { SetupPage } from "./pages/Setup.js";
 
@@ -78,6 +79,14 @@ export function App() {
           element={
             <RequireAuth minimum="admin">
               <OrgUnitsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/service-accounts"
+          element={
+            <RequireAuth minimum="admin">
+              <ServiceAccountsPage />
             </RequireAuth>
           }
         />

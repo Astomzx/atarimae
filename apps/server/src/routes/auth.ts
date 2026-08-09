@@ -21,7 +21,7 @@ import {
   SESSION_COOKIE,
   upsertDevice,
 } from "../lib/session.js";
-import { requireAuth } from "../plugins/auth.js";
+import { denyTokenAuth, requireAuth } from "../plugins/auth.js";
 
 interface LoginCandidate {
   id: string;
@@ -165,10 +165,15 @@ export const authRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
   );
 
+  /**
+   * Sessions belong to people. An API token has none — there is nothing for it
+   * to sign out of — so these three refuse token authentication rather than
+   * quietly doing nothing with a null session id.
+   */
   app.post(
     "/auth/logout",
     {
-      preHandler: requireAuth,
+      preHandler: [requireAuth, denyTokenAuth],
       schema: {
         tags: ["auth"],
         summary: "Sign out of the current session",
@@ -180,13 +185,16 @@ export const authRoutes: FastifyPluginAsyncTypebox = async (app) => {
     },
     async (request, reply) => {
       const user = request.user!;
+      // Non-null because denyTokenAuth ran: only a person's session reaches
+      // here, and a person's session always has an id.
+      const sessionId = user.sessionId!;
 
-      await revokeSession(app.db, user.sessionId, "user_signed_out");
+      await revokeSession(app.db, sessionId, "user_signed_out");
       await writeAuditBestEffort(app.db, request, {
         action: AuditAction.LOGOUT,
         actorUserId: user.id,
         resourceType: "session",
-        resourceId: user.sessionId,
+        resourceId: sessionId,
       });
 
       reply.clearCookie(SESSION_COOKIE, { path: "/" });
@@ -220,7 +228,7 @@ export const authRoutes: FastifyPluginAsyncTypebox = async (app) => {
   app.get(
     "/auth/sessions",
     {
-      preHandler: requireAuth,
+      preHandler: [requireAuth, denyTokenAuth],
       schema: {
         tags: ["auth"],
         summary: "My active sessions",
@@ -277,7 +285,7 @@ export const authRoutes: FastifyPluginAsyncTypebox = async (app) => {
   app.delete(
     "/auth/sessions/:sessionId",
     {
-      preHandler: requireAuth,
+      preHandler: [requireAuth, denyTokenAuth],
       schema: {
         tags: ["auth"],
         summary: "Revoke one of my sessions",

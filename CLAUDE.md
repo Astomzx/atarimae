@@ -96,21 +96,27 @@ twice inside one response breaks Fastify's serializer.
 | M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
 | M3a chat                                                         | done             |
 | M4 PWA + Tauri                                                   | not started      |
-| M5 open API, webhooks, call providers                            | not started      |
+| M5 open API, webhooks, call providers                            | tokens done      |
 | M6a security, attachments, backup/restore                        | attachments done |
 | M6b documentation, screenshots, release                          | not started      |
 
-248 server unit tests, 40 web unit tests, 110 E2E, 7 migrations. CI green.
+279 server unit tests, 40 web unit tests, 124 E2E, 8 migrations. CI green.
 
 ## Suggested order from here
 
-1. **M5** — service accounts, API tokens (hashed, never encrypted), webhooks
-   with HMAC signatures, generic URL and HTTP call providers.
+1. **The rest of M5** — webhooks with HMAC signatures, then the 通話 (call)
+   providers: a generic URL/HTTP provider so any telephony vendor can be
+   configured without the product naming one. Service accounts and API tokens
+   are done; see `docs/architecture/service-accounts.md`.
 2. **M4** — PWA first, then Tauri. **Tauri needs a Rust toolchain that is not
    installed on this machine.**
 3. **The rest of M6a** — backup/restore, and the security pass. Attachments are
    done; see `docs/architecture/attachments.md`.
 4. **M6b** — three-language README, screenshots, demo video, release.
+
+**`users.kind` is now a thing.** Any new query that means "people" must say
+`kind = 'person'`; service accounts are rows in the same table. The three
+places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
@@ -144,6 +150,8 @@ twice inside one response breaks Fastify's serializer.
   trustworthy, constraint by constraint
 - `docs/architecture/attachments.md` — the four upload rules, the hole each one
   closes, and the limits stated plainly
+- `docs/architecture/service-accounts.md` — why an integration is not a person's
+  token, and what a leaked token still cannot do
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.

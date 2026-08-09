@@ -104,8 +104,12 @@ export async function openDirectConversation(
     );
   }
 
+  // `kind = 'person'`: a one-to-one conversation with a service account is a
+  // conversation with something that will never read it.
   const { rows: others } = await client.query<{ id: string }>(
-    "SELECT id FROM users WHERE id = $1 AND disabled_at IS NULL AND anonymized_at IS NULL",
+    `SELECT id FROM users
+      WHERE id = $1 AND disabled_at IS NULL AND anonymized_at IS NULL
+        AND kind = 'person'`,
     [otherUserId],
   );
   if (!others[0]) throw ApiError.notFound("User not found.");

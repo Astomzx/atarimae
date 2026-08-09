@@ -21,6 +21,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoutes } from "./routes/health.js";
 import { orgUnitRoutes } from "./routes/org-units.js";
+import { serviceAccountRoutes } from "./routes/service-accounts.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { startNotificationWorker } from "./services/worker-loop.js";
 import { setupRoutes } from "./routes/setup.js";
@@ -220,6 +221,7 @@ export async function buildApp({
       await api.register(announcementRoutes);
       await api.register(announcementCsvRoutes);
       await api.register(chatRoutes);
+      await api.register(serviceAccountRoutes);
       await api.register(settingsRoutes);
       await registerRealtime(api);
     },

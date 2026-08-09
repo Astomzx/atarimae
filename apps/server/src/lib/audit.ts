@@ -25,6 +25,13 @@ export const AuditAction = {
 
   SMTP_CONFIGURED: "settings.smtp_configured",
 
+  SERVICE_ACCOUNT_CREATED: "service_account.created",
+  SERVICE_ACCOUNT_DISABLED: "service_account.disabled",
+  SERVICE_ACCOUNT_RESTORED: "service_account.restored",
+  /** Records the token's prefix and never the token. */
+  API_TOKEN_ISSUED: "api_token.issued",
+  API_TOKEN_REVOKED: "api_token.revoked",
+
   ORG_UNIT_CREATED: "org_unit.created",
   ORG_UNIT_UPDATED: "org_unit.updated",
   ORG_UNIT_DISABLED: "org_unit.disabled",

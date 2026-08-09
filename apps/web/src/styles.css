@@ -905,3 +905,51 @@ body {
 .chat__pending-name {
   overflow-wrap: anywhere;
 }
+
+/* ------------------------------------------------------ service accounts -- */
+
+.token-panel {
+  flex-basis: 100%;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+  display: grid;
+  gap: 0.75rem;
+}
+
+/*
+ * The one time the token exists on this side. Loud on purpose: the server
+ * keeps a hash, so "show it to me again" has no answer, and somebody who
+ * closes this without copying has to revoke and reissue.
+ */
+.token-reveal {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.token-reveal__label {
+  margin: 0;
+  font-weight: 600;
+  color: var(--warning);
+  font-size: 0.9rem;
+}
+
+.token-reveal__value {
+  display: block;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.badge--member {
+  border-color: var(--border);
+}

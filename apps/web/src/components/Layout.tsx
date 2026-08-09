@@ -91,6 +91,11 @@ export function Layout() {
                 部署
               </NavLink>
             )}
+            {isAdmin && (
+              <NavLink to="/service-accounts" className="nav__link">
+                連携
+              </NavLink>
+            )}
             <NavLink to="/sessions" className="nav__link">
               ログイン端末
             </NavLink>

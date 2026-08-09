@@ -6,15 +6,20 @@ import type {
   AuthenticatedUser,
   CommandSummary,
   CreateAnnouncementRequest,
+  CreateApiTokenRequest,
+  CreateApiTokenResponse,
   CreateChannelRequest,
+  CreateServiceAccountRequest,
   CreateOrgUnitRequest,
   CreateOwnerRequest,
   CreateUserRequest,
   ErrorResponse,
   HealthResponse,
+  ListApiTokensResponse,
   ListChannelMembersResponse,
   ListChannelsResponse,
   ListMessagesResponse,
+  ListServiceAccountsResponse,
   LoginRequest,
   Message,
   MyAnnouncement,
@@ -23,6 +28,7 @@ import type {
   ReviseContentRequest,
   Role,
   SendMessageRequest,
+  ServiceAccount,
   SessionSummary,
   SetupStatusResponse,
   SmtpSettingsResponse,
@@ -264,6 +270,28 @@ export const api = {
       send<void>("POST", `/channels/${channelId}/read`, { messageId }),
   },
 
+  /**
+   * Service accounts and their tokens.
+   *
+   * Every one of these refuses API-token authentication server-side: issuing a
+   * token is a decision a person makes, not work an integration does.
+   */
+  serviceAccounts: {
+    list: () => request<ListServiceAccountsResponse>("/service-accounts"),
+    create: (input: CreateServiceAccountRequest) =>
+      send<ServiceAccount>("POST", "/service-accounts", input),
+    disable: (id: string) =>
+      send<ServiceAccount>("POST", `/service-accounts/${id}/disable`),
+    restore: (id: string) =>
+      send<ServiceAccount>("POST", `/service-accounts/${id}/restore`),
+    tokens: (id: string) =>
+      request<ListApiTokensResponse>(`/service-accounts/${id}/tokens`),
+    issueToken: (id: string, input: CreateApiTokenRequest) =>
+      send<CreateApiTokenResponse>("POST", `/service-accounts/${id}/tokens`, input),
+    revokeToken: (id: string, tokenId: string) =>
+      send<void>("DELETE", `/service-accounts/${id}/tokens/${tokenId}`),
+  },
+
   orgUnits: {
     list: (includeDisabled = false) =>
       request<{ items: OrgUnit[] }>(
@@ -314,6 +342,12 @@ const MESSAGES: Record<string, string> = {
   ATTACHMENT_NOT_CLAIMABLE:
     "添付ファイルを送信できませんでした。時間をおいてから、もう一度添付してください。",
   PAYLOAD_TOO_LARGE: "ファイルが大きすぎます。1つあたり25MBまでです。",
+  TOKEN_AUTH_NOT_ALLOWED:
+    "この操作は API トークンでは実行できません。担当者としてログインしてください。",
+  TOKEN_INVALID: "このトークンは使用できません。停止中のサービスアカウントです。",
+  NOT_A_SERVICE_ACCOUNT: "そのアカウントは担当者です。サービスアカウントではありません。",
+  SERVICE_ACCOUNT_ROLE_INVALID:
+    "サービスアカウントにオーナー権限は付与できません。管理者までです。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

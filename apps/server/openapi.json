@@ -20352,6 +20352,3150 @@
         }
       }
     },
+    "/service-accounts": {
+      "get": {
+        "summary": "Service accounts",
+        "tags": [
+          "service-accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "displayName",
+                          "role",
+                          "description",
+                          "activeTokenCount",
+                          "lastUsedAt",
+                          "disabledAt",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "description": "UUIDv7 identifier.",
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "type": "string"
+                          },
+                          "role": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "member"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "admin"
+                                ]
+                              }
+                            ]
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "activeTokenCount": {
+                            "type": "integer"
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "description": "UTC timestamp, ISO 8601.",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "disabledAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "description": "UTC timestamp, ISO 8601.",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "description": "UTC timestamp, ISO 8601.",
+                            "type": "string"
+                          }
+                        },
+                        "title": "ServiceAccount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a service account",
+        "tags": [
+          "service-accounts"
+        ],
+        "description": "An identity for an integration, so a token does not have to belong to a person who might leave. It has no password and can never sign in interactively.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "displayName",
+                  "role"
+                ],
+                "properties": {
+                  "displayName": {
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "role": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "member"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "admin"
+                        ]
+                      }
+                    ]
+                  },
+                  "description": {
+                    "maxLength": 500,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "displayName",
+                    "role",
+                    "description",
+                    "activeTokenCount",
+                    "lastUsedAt",
+                    "disabledAt",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "description": "UUIDv7 identifier.",
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "type": "string"
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "member"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "admin"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "activeTokenCount": {
+                      "type": "integer"
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "disabledAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "description": "UTC timestamp, ISO 8601.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-accounts/{serviceAccountId}/disable": {
+      "post": {
+        "summary": "Disable a service account",
+        "tags": [
+          "service-accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serviceAccountId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "displayName",
+                    "role",
+                    "description",
+                    "activeTokenCount",
+                    "lastUsedAt",
+                    "disabledAt",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "description": "UUIDv7 identifier.",
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "type": "string"
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "member"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "admin"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "activeTokenCount": {
+                      "type": "integer"
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "disabledAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "description": "UTC timestamp, ISO 8601.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-accounts/{serviceAccountId}/restore": {
+      "post": {
+        "summary": "Restore a disabled service account",
+        "tags": [
+          "service-accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serviceAccountId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "displayName",
+                    "role",
+                    "description",
+                    "activeTokenCount",
+                    "lastUsedAt",
+                    "disabledAt",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "description": "UUIDv7 identifier.",
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "type": "string"
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "member"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "admin"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "activeTokenCount": {
+                      "type": "integer"
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "disabledAt": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "description": "UTC timestamp, ISO 8601.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-accounts/{serviceAccountId}/tokens": {
+      "get": {
+        "summary": "Tokens issued to a service account",
+        "tags": [
+          "service-accounts"
+        ],
+        "description": "The tokens themselves are not here and cannot be: the server keeps a hash. The prefix is enough to tell them apart for revocation.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serviceAccountId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "serviceAccountId",
+                          "name",
+                          "tokenPrefix",
+                          "expiresAt",
+                          "lastUsedAt",
+                          "revokedAt",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "description": "UUIDv7 identifier.",
+                            "type": "string"
+                          },
+                          "serviceAccountId": {
+                            "format": "uuid",
+                            "description": "UUIDv7 identifier.",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "tokenPrefix": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "description": "UTC timestamp, ISO 8601.",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "description": "UTC timestamp, ISO 8601.",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "revokedAt": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "description": "UTC timestamp, ISO 8601.",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "description": "UTC timestamp, ISO 8601.",
+                            "type": "string"
+                          }
+                        },
+                        "title": "ApiToken"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Issue an API token",
+        "tags": [
+          "service-accounts"
+        ],
+        "description": "The token is in the response and nowhere else, ever again. It is stored as a SHA-256 hash, so it cannot be shown a second time — losing it means issuing another and revoking this one.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "minLength": 1,
+                    "maxLength": 120,
+                    "type": "string"
+                  },
+                  "expiresInDays": {
+                    "minimum": 1,
+                    "maximum": 3650,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serviceAccountId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token",
+                    "plaintext"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "serviceAccountId",
+                        "name",
+                        "tokenPrefix",
+                        "expiresAt",
+                        "lastUsedAt",
+                        "revokedAt",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "description": "UUIDv7 identifier.",
+                          "type": "string"
+                        },
+                        "serviceAccountId": {
+                          "format": "uuid",
+                          "description": "UUIDv7 identifier.",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "tokenPrefix": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "description": "UTC timestamp, ISO 8601.",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lastUsedAt": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "description": "UTC timestamp, ISO 8601.",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "revokedAt": {
+                          "anyOf": [
+                            {
+                              "format": "date-time",
+                              "description": "UTC timestamp, ISO 8601.",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "format": "date-time",
+                          "description": "UTC timestamp, ISO 8601.",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "plaintext": {
+                      "description": "The token. Displayed once at creation and never retrievable — the server stores only a SHA-256 hash.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-accounts/{serviceAccountId}/tokens/{tokenId}": {
+      "delete": {
+        "summary": "Revoke a token",
+        "tags": [
+          "service-accounts"
+        ],
+        "description": "Takes effect on the next request: authentication looks the token up every time and never caches the result.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serviceAccountId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "tokenId",
+            "required": true,
+            "description": "UUIDv7 identifier."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "description": "Stable machine-readable error code.",
+                      "type": "string",
+                      "example": "NO_ELIGIBLE_RECIPIENTS"
+                    },
+                    "message": {
+                      "description": "Developer-facing English description. Not shown to end users.",
+                      "type": "string"
+                    },
+                    "details": {
+                      "description": "Structured context. Never contains secrets.",
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "requestId": {
+                      "description": "Correlates with server logs and audit_logs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/settings/smtp": {
       "get": {
         "summary": "Current SMTP configuration",

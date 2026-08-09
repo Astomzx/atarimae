@@ -16,7 +16,7 @@ export async function resetDatabase(): Promise<void> {
   await client.connect();
   try {
     await client.query(
-      `TRUNCATE audit_logs, sessions, user_devices, invitations,
+      `TRUNCATE api_tokens, audit_logs, sessions, user_devices, invitations,
                 message_mentions, message_attachments, messages,
                 direct_conversations, channel_members, channels,
                 user_org_units, org_units, users RESTART IDENTITY CASCADE`,

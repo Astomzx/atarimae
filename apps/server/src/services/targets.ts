@@ -11,6 +11,12 @@ import type { DatabaseClient } from "../db.js";
  * Disabled and anonymized accounts are excluded: an announcement addressed to
  * a department means its current active members, and a disabled person can
  * neither read nor acknowledge anything.
+ *
+ * Service accounts are excluded for the same reason, and it matters more than
+ * it looks. An announcement to 全員 creates an acknowledgement obligation per
+ * recipient; a robot that cannot acknowledge would sit in the denominator
+ * forever, and "12 / 13 confirmed" would never reach 100% with nobody able to
+ * say why.
  */
 
 export interface ResolvedRecipient {
@@ -36,6 +42,7 @@ const RESOLVE_SQL = `
    WHERE t.target_version_id = $1
      AND u.disabled_at IS NULL
      AND u.anonymized_at IS NULL
+     AND u.kind = 'person'
    ORDER BY u.id
 `;
 

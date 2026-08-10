@@ -84,15 +84,17 @@ export default tseslint.config(
 
   // CLI entry points legitimately write to stdout.
   {
-    files: ["scripts/**", "apps/server/src/openapi.ts"],
+    files: ["**/scripts/**", "apps/server/src/openapi.ts"],
     rules: {
       "no-console": "off",
     },
   },
 
-  // Plain Node scripts: no tsconfig project, Node globals.
+  // Plain Node scripts: no tsconfig project, Node globals. The glob is not
+  // anchored to the root — apps/desktop has its own scripts/, outside every
+  // tsconfig for the same reason.
   {
-    files: ["scripts/**/*.mjs", "*.js", "*.mjs"],
+    files: ["**/scripts/**/*.mjs", "*.js", "*.mjs"],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: {
       globals: globals.node,

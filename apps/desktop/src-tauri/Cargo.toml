@@ -1,0 +1,50 @@
+[package]
+name = "atarimae-desktop"
+version = "0.0.0"
+description = "Atarimae desktop client"
+edition = "2021"
+rust-version = "1.77"
+license = "AGPL-3.0-only"
+publish = false
+
+# Deliberately not a member of the pnpm workspace and not referenced by
+# `pnpm -r build`. `pnpm check` must stay a Node-only gate that runs in
+# seconds; compiling a webview shell into it would make every commit wait on
+# Rust.
+
+[lib]
+name = "atarimae_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# For the reachability check before an address is saved. Rust does the request
+# rather than the webview because the connect screen is served from
+# `tauri://localhost`, and asking somebody's server from there is a
+# cross-origin request their CORS configuration would rightly refuse.
+#
+# native-tls rather than rustls: on Windows it is schannel, which is already
+# there, and this is a Windows client.
+reqwest = { version = "0.12", default-features = false, features = [
+  "json",
+  "native-tls",
+] }
+
+[dev-dependencies]
+# The async tests need a runtime. Tauri brings tokio anyway; this only makes
+# the #[tokio::test] attribute available.
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[profile.release]
+# A desktop shell nobody profiles. Smaller is the only axis that matters.
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

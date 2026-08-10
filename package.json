@@ -30,7 +30,11 @@
     "db:verify": "node scripts/db.mjs verify",
     "db:test:reset": "node scripts/db.mjs reset --test",
     "check": "pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
-    "prepare": "node -e \"process.exit(0)\""
+    "prepare": "node -e \"process.exit(0)\"",
+    "desktop:dev": "cargo tauri dev --config apps/desktop/src-tauri/tauri.conf.json",
+    "desktop:build": "cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json",
+    "desktop:test": "cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml",
+    "desktop:icons": "node apps/desktop/scripts/make-icons.mjs"
   },
   "//dependencies": "Migrations are run by the operator inside the container — `docker compose exec app node scripts/db.mjs up` — so the migration runner ships in the production image. As devDependencies they were pruned by the --prod install and that documented step failed with ERR_MODULE_NOT_FOUND.",
   "dependencies": {

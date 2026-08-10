@@ -95,21 +95,24 @@ twice inside one response breaks Fastify's serializer.
 | M1 accounts, org units, permissions                              | done             |
 | M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
 | M3a chat                                                         | done             |
-| M4 PWA + Tauri                                                   | PWA done         |
+| M4 PWA + Tauri                                                   | done             |
 | M5 open API, webhooks, 通話 providers                            | done             |
 | M6a security, attachments, backup/restore                        | attachments done |
 | M6b documentation, screenshots, release                          | not started      |
 
-350 server unit tests, 49 web unit tests, 151 E2E, 10 migrations. CI green.
+350 server unit tests, 49 web unit tests, 12 desktop (Rust), 151 E2E,
+10 migrations. CI green.
 
 ## Suggested order from here
 
-1. **Tauri**, the other half of M4. The toolchain is ready: Rust, the MSVC
-   linker and WebView2 are all installed here now, and a native binary links.
-   The PWA half is done — `docs/architecture/pwa.md`.
-2. **The rest of M6a** — backup/restore, and the security pass. Attachments are
+1. **The rest of M6a** — backup/restore, and the security pass. Attachments are
    done; see `docs/architecture/attachments.md`.
-3. **M6b** — three-language README, screenshots, demo video, release.
+2. **M6b** — three-language README, screenshots, demo video, release.
+
+**The desktop client is not in the pnpm workspace.** `apps/desktop` has no
+`package.json` on purpose, so `pnpm -r build` never reaches it and `pnpm check`
+stays a Node-only gate that runs in seconds. Its commands are `desktop:*` on
+the root package; see `docs/architecture/desktop.md`.
 
 **通話 is network calls, not telephone calls** — and both one-to-one and group
 calls, from the same mechanism: a call belongs to a channel, and a channel is
@@ -170,4 +173,6 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   build found, including one that produced a healthy container with no tables.
 - `docs/architecture/pwa.md` — what is cached and what is refused, and why an
   offline client is the easiest place to break this product's own rule.
+- `docs/architecture/desktop.md` — why the address cannot be hard-coded, and
+  why the client refuses one that does not answer.
 - `docs/architecture/decisions.md` — toolchain decisions and their reasons

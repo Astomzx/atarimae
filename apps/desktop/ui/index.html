@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atarimae</title>
+    <!--
+      The only page this shell serves. Everything after connecting is the web
+      application the server already has, so there is no build step here and no
+      framework — one form, one request.
+
+      The styling mirrors apps/web/src/styles.css deliberately rather than
+      importing it: a copy of four colours is cheaper than a build pipeline for
+      a single screen, and the screen must render before anything is known
+      about the server.
+    -->
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --surface: #ffffff;
+        --border: #dfe3e8;
+        --text: #1a1d21;
+        --text-muted: #5c636e;
+        --accent: #1f5f8b;
+        --accent-text: #ffffff;
+        --error: #b3261e;
+        --radius: 10px;
+        color-scheme: light dark;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14161a;
+          --surface: #1c1f24;
+          --border: #2c3138;
+          --text: #e8eaed;
+          --text-muted: #9aa2ad;
+          --accent: #6ea8d8;
+          --accent-text: #10151a;
+          --error: #f87171;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP",
+          Meiryo,
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        width: 100%;
+        max-width: 420px;
+      }
+
+      .brand {
+        text-align: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        letter-spacing: 0.02em;
+      }
+
+      .brand p {
+        margin: 0.25rem 0 0;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+      }
+
+      h2 {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.3rem;
+        margin-bottom: 1rem;
+      }
+
+      .label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
+      input {
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.95rem;
+      }
+
+      input:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .hint {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      button {
+        width: 100%;
+        padding: 0.55rem 1rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--accent-text);
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .alert {
+        margin: 0.75rem 0 0;
+        padding: 0.6rem 0.8rem;
+        border-radius: var(--radius);
+        font-size: 0.9rem;
+        background: color-mix(in srgb, var(--error) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--error) 35%, transparent);
+        color: var(--error);
+      }
+
+      .footnote {
+        margin: 1rem 0 0;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <h1>Atarimae</h1>
+        <p>当たり前のことが、当たり前にできる社内掲示板。</p>
+      </div>
+
+      <div class="card">
+        <h2>サーバーに接続</h2>
+
+        <form id="connect">
+          <label>
+            <span class="label">サーバーのアドレス</span>
+            <input
+              id="address"
+              type="text"
+              placeholder="atarimae.example.co.jp"
+              autocomplete="url"
+              autofocus
+              required
+            />
+            <span class="hint">
+              社内で使っているアドレスを入力してください。分からない場合は管理者に確認してください。
+            </span>
+          </label>
+
+          <button id="submit" type="submit">接続</button>
+        </form>
+
+        <p id="error" class="alert" hidden></p>
+      </div>
+
+      <p class="footnote">
+        このアプリは接続先を保存するだけです。データはすべて自社のサーバーにあります。
+      </p>
+    </main>
+
+    <script>
+      const form = document.getElementById("connect");
+      const address = document.getElementById("address");
+      const submit = document.getElementById("submit");
+      const error = document.getElementById("error");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        error.hidden = true;
+        submit.disabled = true;
+        submit.textContent = "確認中…";
+
+        try {
+          // Rust does the request. From here it would be a cross-origin call
+          // to somebody's server, which their CORS configuration would rightly
+          // refuse — and refusing would look exactly like the server being
+          // down.
+          await window.__TAURI__.core.invoke("connect", { address: address.value });
+          // On success the window is navigated from Rust; nothing to do here.
+        } catch (failure) {
+          error.textContent = String(failure);
+          error.hidden = false;
+          submit.disabled = false;
+          submit.textContent = "接続";
+        }
+      });
+    </script>
+  </body>
+</html>

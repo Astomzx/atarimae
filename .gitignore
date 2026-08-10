@@ -40,3 +40,8 @@ pnpm-debug.log*
 # Local attachment storage during development
 var/
 uploads/
+
+# Rust build output for the desktop client. Cargo.lock IS committed — it is a
+# binary crate, and a reproducible build is the point.
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { FullPageMessage, RequireAuth, useSetupStatus } from "./auth.js";
 import { Layout } from "./components/Layout.js";
+import { PwaBar } from "./components/PwaBar.js";
 import { AnnouncementDetailPage } from "./pages/AnnouncementDetail.js";
 import { AnnouncementsPage } from "./pages/Announcements.js";
 import { ChannelRoute } from "./pages/Channel.js";
@@ -15,7 +16,24 @@ import { ServiceAccountsPage } from "./pages/ServiceAccounts.js";
 import { SessionsPage } from "./pages/Sessions.js";
 import { SetupPage } from "./pages/Setup.js";
 
+/**
+ * Above the router, not inside the layout.
+ *
+ * The first attempt put this in `Layout`, which meant that offline — when the
+ * setup check fails and the whole application falls back to "cannot reach the
+ * server" — the one message explaining *why* never rendered. It has to sit
+ * outside everything that depends on the server answering.
+ */
 export function App() {
+  return (
+    <>
+      <PwaBar />
+      <AppRoutes />
+    </>
+  );
+}
+
+function AppRoutes() {
   const status = useSetupStatus();
 
   if (status.isPending) return <FullPageMessage>読み込み中…</FullPageMessage>;

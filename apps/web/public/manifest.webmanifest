@@ -1,0 +1,41 @@
+{
+  "name": "Atarimae",
+  "short_name": "Atarimae",
+  "description": "当たり前のことが、当たり前にできる社内掲示板。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1f5f8b",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "お知らせ",
+      "short_name": "お知らせ",
+      "description": "自分宛てのお知らせと、確認が必要なもの",
+      "url": "/my/announcements"
+    },
+    {
+      "name": "チャット",
+      "short_name": "チャット",
+      "description": "会話とチャンネル",
+      "url": "/chat"
+    }
+  ]
+}

@@ -1014,3 +1014,35 @@ body {
   color: var(--ok);
   font-size: 0.9rem;
 }
+
+/* ------------------------------------------------------------------ pwa -- */
+
+/*
+ * Offline, out of date, or installable. All three change what the content
+ * underneath is worth, so they sit above it rather than inside a page.
+ */
+.pwa-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pwa-bar--offline {
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+  border-bottom-color: var(--warning);
+  color: var(--text);
+}
+
+.pwa-bar--update {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-bottom-color: var(--accent);
+}
+
+.pwa-bar--install {
+  background: var(--surface-alt);
+}

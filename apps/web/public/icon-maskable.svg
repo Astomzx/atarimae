@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Atarimae">
+  <!--
+    The maskable variant.
+
+    Android crops an installed icon to whatever shape the launcher uses, and
+    only the middle 80% is guaranteed to survive. So the background bleeds to
+    the full square and the mark is drawn smaller, inside that safe circle —
+    otherwise the check loses its ends on a round launcher.
+  -->
+  <rect width="512" height="512" fill="#1f5f8b" />
+  <path
+    d="M176 266 L232 322 L336 190"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="40"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

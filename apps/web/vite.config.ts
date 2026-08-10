@@ -34,6 +34,21 @@ export default defineConfig({
     host: "127.0.0.1",
     port,
     strictPort: true,
+    /**
+     * The same proxy as development.
+     *
+     * `preview` serves the production build, which is the only mode where the
+     * service worker registers — so it is the only place the PWA can be tested
+     * at all. Without this it would serve the app and then fail every API call,
+     * and the offline tests could not tell that apart from being offline.
+     */
+    proxy: {
+      "/api": {
+        target: apiTarget,
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
   build: {
     outDir: "dist",

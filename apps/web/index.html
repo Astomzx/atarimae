@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atarimae</title>
+    <meta name="description" content="当たり前のことが、当たり前にできる社内掲示板。" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <!-- iOS ignores the manifest's icons and reads this instead. -->
+    <link rel="apple-touch-icon" href="/icon.svg" />
+
+    <!--
+      Two colours, so the browser chrome matches the interface rather than
+      fighting it. styles.css switches the same way.
+    -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1f5f8b" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14161a" />
   </head>
   <body>
     <div id="root"></div>

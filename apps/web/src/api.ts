@@ -46,6 +46,8 @@ import type {
   Webhook,
 } from "@atarimae/api-schema";
 
+import { pwa } from "./pwa.js";
+
 const BASE = "/api/v1";
 
 /**
@@ -91,11 +93,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("content-type", "application/json");
   }
 
-  const response = await fetch(`${BASE}${path}`, {
-    ...init,
-    credentials: "same-origin",
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      ...init,
+      credentials: "same-origin",
+      headers,
+    });
+  } catch {
+    /**
+     * `fetch` only rejects when the request never happened — DNS, connection
+     * refused, offline. A 500 is a resolved promise.
+     *
+     * This is what drives the offline banner, rather than `navigator.onLine`:
+     * the claim being made on screen is "this cannot be sent right now", and
+     * the evidence for it is a request that could not be sent.
+     */
+    pwa.reportReachable(false);
+    throw new ApiRequestError(
+      0,
+      "NETWORK_UNREACHABLE",
+      "The server could not be reached.",
+    );
+  }
+
+  // Anything with a status came from the server, including its errors.
+  pwa.reportReachable(true);
 
   if (!response.ok) {
     let body: ErrorResponse | undefined;
@@ -399,6 +422,8 @@ const MESSAGES: Record<string, string> = {
     "会議室 URL は http または https で、{room} を含む必要があります。",
   CALL_PROVIDER_INCOMPLETE: "通話サービスの設定が不完全です。",
   CALL_ALREADY_ENDED: "この通話は既に終了しています。",
+  NETWORK_UNREACHABLE:
+    "サーバーに接続できません。オフラインの可能性があります。接続を確認してから、もう一度お試しください。",
   VALIDATION_FAILED: "入力内容を確認してください。",
   FORBIDDEN: "この操作を行う権限がありません。",
   UNAUTHENTICATED: "ログインが必要です。",

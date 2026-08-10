@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Atarimae">
+  <!--
+    A check mark on a board.
+
+    The product is about a confirmation that can be trusted, so the mark is the
+    confirmation. Deliberately plain: this is meant to look unlike the software
+    it is arguing with, and it has to stay legible at 16px in a browser tab.
+  -->
+  <rect width="512" height="512" rx="112" fill="#1f5f8b" />
+  <path
+    d="M148 264 L220 336 L364 176"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="48"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

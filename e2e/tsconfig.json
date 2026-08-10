@@ -4,6 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
+    // DOM, because specs run code inside the browser via page.evaluate — the
+    // PWA one reads `caches`, which only exists there.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["**/*.ts"]

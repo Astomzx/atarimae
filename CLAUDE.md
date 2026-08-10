@@ -95,19 +95,18 @@ twice inside one response breaks Fastify's serializer.
 | M1 accounts, org units, permissions                              | done             |
 | M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
 | M3a chat                                                         | done             |
-| M4 PWA + Tauri                                                   | not started      |
+| M4 PWA + Tauri                                                   | PWA done         |
 | M5 open API, webhooks, 通話 providers                            | done             |
 | M6a security, attachments, backup/restore                        | attachments done |
 | M6b documentation, screenshots, release                          | not started      |
 
-350 server unit tests, 40 web unit tests, 144 E2E, 10 migrations. CI green.
+350 server unit tests, 49 web unit tests, 151 E2E, 10 migrations. CI green.
 
 ## Suggested order from here
 
-1. **M4** — PWA first, then Tauri. The PWA half needs no toolchain at all.
-   **Rust is now installed** (stable-msvc, on the data drive), but Tauri still
-   cannot link: the msvc target needs `link.exe` from the Visual Studio Build
-   Tools, and those need an elevated install. WebView2 is already present.
+1. **Tauri**, the other half of M4. The toolchain is ready: Rust, the MSVC
+   linker and WebView2 are all installed here now, and a native binary links.
+   The PWA half is done — `docs/architecture/pwa.md`.
 2. **The rest of M6a** — backup/restore, and the security pass. Attachments are
    done; see `docs/architecture/attachments.md`.
 3. **M6b** — three-language README, screenshots, demo video, release.
@@ -169,4 +168,6 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   and the hazards it was written against.
 - `docs/engineering/docker-first-build.md` — three defects the first-ever image
   build found, including one that produced a healthy container with no tables.
+- `docs/architecture/pwa.md` — what is cached and what is refused, and why an
+  offline client is the easiest place to break this product's own rule.
 - `docs/architecture/decisions.md` — toolchain decisions and their reasons

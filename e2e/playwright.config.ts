@@ -24,6 +24,8 @@ if (!testDatabaseUrl) {
 
 const WEB_PORT = 5273;
 const API_PORT = 3100;
+/** `vite preview`, serving the production build the PWA spec needs. */
+const PREVIEW_PORT = 5373;
 const isCI = !!process.env["CI"];
 
 export default defineConfig({
@@ -52,6 +54,8 @@ export default defineConfig({
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },
+      // The PWA has its own project below, against the production build.
+      testIgnore: /pwa\.spec\.ts$/,
     },
     {
       // The product rule is that phone and PC are not two different products.
@@ -60,7 +64,20 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
       // Pure API scenarios are viewport-independent. Running them under both
       // projects would repeat identical assertions against one shared database.
-      testIgnore: /acceptance\.spec\.ts$/,
+      testIgnore: /acceptance\.spec\.ts$|pwa\.spec\.ts$/,
+    },
+    {
+      /**
+       * The PWA, against `vite preview` rather than `vite dev`.
+       *
+       * The service worker only registers in a production build — a worker
+       * that pins the shell fights hot reload — so this is the only mode where
+       * there is anything to test. It gets its own project rather than its own
+       * width: what is being proved is offline behaviour, not layout.
+       */
+      name: "pwa",
+      testMatch: /pwa\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], baseURL: `http://127.0.0.1:${PREVIEW_PORT}` },
     },
   ],
 
@@ -81,6 +98,24 @@ export default defineConfig({
         // Uploads land in their own directory, never in the one a development
         // session is using.
         ATTACHMENT_ROOT: join(ROOT, "e2e", "var", "attachments"),
+      },
+    },
+    {
+      /**
+       * The production build, for the PWA spec only.
+       *
+       * Built here rather than assumed: the service worker caches whatever the
+       * build produced, so testing a stale `dist` would be testing yesterday's
+       * assets.
+       */
+      command: "pnpm --filter @atarimae/web build && pnpm --filter @atarimae/web preview",
+      port: PREVIEW_PORT,
+      cwd: ROOT,
+      reuseExistingServer: !isCI,
+      timeout: 180_000,
+      env: {
+        VITE_PORT: String(PREVIEW_PORT),
+        VITE_API_TARGET: `http://127.0.0.1:${API_PORT}`,
       },
     },
     {

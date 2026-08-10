@@ -100,5 +100,18 @@ export default tseslint.config(
     },
   },
 
+  // The service worker is shipped as-is from public/, so it is outside every
+  // tsconfig and cannot be type-checked. It is a classic worker on purpose —
+  // module service workers are still unsupported on Safari, and iOS is where a
+  // PWA matters most.
+  {
+    files: ["apps/web/public/*.js"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { ...globals.serviceworker, ...globals.browser },
+      sourceType: "script",
+    },
+  },
+
   prettier,
 );

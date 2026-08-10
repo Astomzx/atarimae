@@ -68,13 +68,13 @@ Atarimae は、このような基本的な機能を、基本的な機能とし�
 | M1             | アカウント・組織・権限                   | 完了     |
 | **M2**         | 公告・個人別内容・確認・通知             | **完了** |
 | **M3a**        | 基本チャット・ファイル添付               | **完了** |
-| M4             | PWA・Windows クライアント                | 未着手   |
+| M4             | PWA・Windows クライアント                | PWA 完了 |
 | **M5**         | 公開 API・Webhook・通話 Provider         | **完了** |
 | M6a / M6b      | セキュリティ・ドキュメント・正式リリース | 一部完了 |
 
 受け入れシナリオはすべて自動テスト化されています
 （[M1](e2e/tests/m1-acceptance.spec.ts)、[M2](e2e/tests/m2-ui.spec.ts)、
-[M3a](e2e/tests/m3a-ui.spec.ts)、[M5](e2e/tests/m5-ui.spec.ts)）。
+[M3a](e2e/tests/m3a-ui.spec.ts)、[M4](e2e/tests/m4-pwa.spec.ts)、[M5](e2e/tests/m5-ui.spec.ts)）。
 PC とスマートフォンの両方の画面幅で同じシナリオを実行しています。
 
 ---

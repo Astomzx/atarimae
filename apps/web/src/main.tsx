@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./App.js";
+import { initialisePwa } from "./pwa.js";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -15,6 +16,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Before rendering, so a network event during the first paint is not missed.
+initialisePwa(import.meta.env.MODE);
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root is missing from index.html");

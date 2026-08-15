@@ -20,9 +20,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# One running copy, not several. Without this a second launch opens a second
+# window onto the same server, and the two disagree about unread counts the
+# moment either one reads something.
+tauri-plugin-single-instance = "2"
 
 # For the reachability check before an address is saved. Rust does the request
 # rather than the webview because the connect screen is served from

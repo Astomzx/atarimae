@@ -100,7 +100,7 @@ twice inside one response breaks Fastify's serializer.
 | M6a security, attachments, backup/restore                        | attachments done |
 | M6b documentation, screenshots, release                          | not started      |
 
-350 server unit tests, 49 web unit tests, 12 desktop (Rust), 151 E2E,
+350 server unit tests, 49 web unit tests, 14 desktop (Rust), 151 E2E,
 10 migrations. CI green.
 
 ## Suggested order from here

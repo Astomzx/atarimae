@@ -10,10 +10,15 @@
 //! adds a taskbar entry and a window that is not a browser tab, and
 //! deliberately nothing else.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+};
 
 /// Long enough for a slow office VPN, short enough that a wrong address does
 /// not look like a hung application.
@@ -188,9 +193,114 @@ async fn forget(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// ----------------------------------------------------------------- tray --
+
+/// Set once, and only by 終了. Closing the window hides it instead of
+/// quitting, so the close handler has to be able to tell the two apart —
+/// otherwise the application can never be shut down at all.
+static QUITTING: AtomicBool = AtomicBool::new(false);
+
+const TRAY_SHOW: &str = "show";
+const TRAY_QUIT: &str = "quit";
+
+/// What a tray menu entry means.
+///
+/// The menu hands back an id as a string, and a `match` on string literals is
+/// exactly the shape that goes wrong quietly: rename an id in one place and the
+/// click still arrives, still matches nothing, and the menu entry does nothing
+/// at all with no error anywhere. Naming the outcomes makes the gap testable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TrayAction {
+    /// Bring the window back, whether it is hidden or merely minimised.
+    Show,
+    /// Really exit — the only way out, now that closing hides.
+    Quit,
+}
+
+fn tray_action(id: &str) -> Option<TrayAction> {
+    match id {
+        TRAY_SHOW => Some(TrayAction::Show),
+        TRAY_QUIT => Some(TrayAction::Quit),
+        _ => None,
+    }
+}
+
+/// Puts the one window in front, from wherever it happens to be.
+///
+/// All three calls are needed and none of them subsumes the others: a hidden
+/// window ignores `set_focus`, a minimised one is visible but not restored by
+/// `show`, and a window that is both is the ordinary case after somebody
+/// closes it to the tray and then clicks the taskbar.
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+/// The tray icon, and the menu behind it.
+///
+/// It earns its place by being the other half of hide-on-close: the window can
+/// go away without the application going away, and this is what says it is
+/// still running and how to get it back.
+fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, TRAY_SHOW, "開く", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, TRAY_QUIT, "終了", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+
+    TrayIconBuilder::with_id("main")
+        .icon(
+            app.default_window_icon()
+                .cloned()
+                .ok_or_else(|| tauri::Error::UnknownPath)?,
+        )
+        .tooltip("Atarimae")
+        // The menu is bound to the right button only. On the left button a
+        // tray icon is expected to open the thing, not to explain itself.
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match tray_action(event.id.as_ref()) {
+            Some(TrayAction::Show) => show_main_window(app),
+            Some(TrayAction::Quit) => {
+                QUITTING.store(true, Ordering::SeqCst);
+                app.exit(0);
+            }
+            // Unreachable while the menu and `tray_action` agree, which is
+            // what the unit tests are for.
+            None => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        /*
+         * Registered first, and deliberately so: the plugin decides whether
+         * this process is the first copy before anything else has had a chance
+         * to open a window, which is the only point at which a second copy can
+         * be turned into "focus the one that is already there".
+         *
+         * Two windows onto the same server is not a harmless duplicate. Both
+         * hold a realtime socket, both mark things read, and the second one to
+         * notice a change shows a count the first one has already cleared.
+         */
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app);
+        }))
         .invoke_handler(tauri::generate_handler![connect, forget])
         .setup(|app| {
             let handle = app.handle();
@@ -209,11 +319,37 @@ pub fn run() {
                 None => WebviewUrl::default(),
             };
 
-            WebviewWindowBuilder::new(app, "main", url)
+            let window = WebviewWindowBuilder::new(app, "main", url)
                 .title("Atarimae")
                 .inner_size(1100.0, 780.0)
                 .min_inner_size(360.0, 480.0)
                 .build()?;
+
+            /*
+             * Closing hides. A board is something people leave open all day and
+             * shut when the screen is in the way, and quitting on that means
+             * the realtime socket is gone until somebody thinks to start the
+             * application again — which they only do after already missing
+             * something.
+             *
+             * This is only defensible because the tray icon exists to say the
+             * application is still there. Without it, hiding on close is an
+             * application that has apparently vanished but is still running,
+             * which is worse than either alternative.
+             */
+            let hidden = window.clone();
+            window.on_window_event(move |event| {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    // 終了 from the tray sets this, and is the one close that
+                    // is allowed through. Everything else hides.
+                    if !QUITTING.load(Ordering::SeqCst) {
+                        api.prevent_close();
+                        let _ = hidden.hide();
+                    }
+                }
+            });
+
+            build_tray(app.handle())?;
 
             Ok(())
         })
@@ -276,6 +412,24 @@ mod tests {
         assert!(normalise("").is_err());
         assert!(normalise("   ").is_err());
         assert!(normalise("https://").is_err());
+    }
+
+    // -------------------------------------------------------------- tray --
+
+    /// The ids are what the menu is built with and what the click handler
+    /// reads. If they ever stop agreeing, the menu entry does nothing and says
+    /// nothing — so the agreement is asserted rather than assumed.
+    #[test]
+    fn every_tray_id_maps_to_an_action() {
+        assert_eq!(tray_action(TRAY_SHOW), Some(TrayAction::Show));
+        assert_eq!(tray_action(TRAY_QUIT), Some(TrayAction::Quit));
+    }
+
+    #[test]
+    fn an_unknown_tray_id_is_not_silently_an_action() {
+        assert_eq!(tray_action(""), None);
+        assert_eq!(tray_action("Show"), None);
+        assert_eq!(tray_action("exit"), None);
     }
 
     // ------------------------------------------------------------- probe --

@@ -94,26 +94,32 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State              |
-| ---------------------------------------------------------------- | ------------------ |
-| M0 foundation                                                    | done               |
-| M1 accounts, org units, permissions                              | done               |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done               |
-| M3a chat                                                         | done               |
-| M4 PWA + Tauri                                                   | done               |
-| M5 open API, webhooks, 通話 providers                            | done               |
-| M6a security, attachments, backup/restore                        | security pass left |
-| M6b documentation, screenshots, release                          | not started        |
+| Milestone                                                        | State       |
+| ---------------------------------------------------------------- | ----------- |
+| M0 foundation                                                    | done        |
+| M1 accounts, org units, permissions                              | done        |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done        |
+| M3a chat                                                         | done        |
+| M4 PWA + Tauri                                                   | done        |
+| M5 open API, webhooks, 通話 providers                            | done        |
+| M6a security, attachments, backup/restore                        | done        |
+| M6b documentation, screenshots, release                          | not started |
 
-350 server unit tests, 49 web unit tests, 33 backup, 20 secret-store,
+369 server unit tests, 49 web unit tests, 33 backup, 20 secret-store,
 14 desktop (Rust), 151 E2E, 10 migrations. CI green.
 
 ## Suggested order from here
 
-1. **The rest of M6a** — the security pass. Attachments and backup/restore are
-   done; see `docs/architecture/attachments.md` and
-   `docs/architecture/backup.md`.
-2. **M6b** — three-language README, screenshots, demo video, release.
+1. **M6b** — three-language README, screenshots, demo video, release.
+
+M6a is done. `docs/architecture/security.md` is what was defended and what was
+not; `docs/engineering/m6a-security.md` is what the pass found.
+
+**`TRUSTED_PROXY_IPS` is new and matters.** `request.ip` is what the sign-in
+rate limit is keyed on and what `audit_logs` records, so `X-Forwarded-For` is
+now believed only from addresses an operator names, and from nobody by default.
+Any deployment behind a reverse proxy must set it or the whole office shares one
+rate-limit budget.
 
 **The desktop client is not in the pnpm workspace.** `apps/desktop` has no
 `package.json` on purpose, so `pnpm -r build` never reaches it and `pnpm check`
@@ -139,6 +145,17 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   `docs/engineering/docker-first-build.md`. Note that signing in needs TLS in
   front: cookies are `Secure` under `NODE_ENV=production`, which is correct and
   is what `docs/deployment/docker.md` describes.
+- **`e2e/tests/m5-ui.spec.ts` is flaky.** Four full runs during the M6a security
+  pass: pass, fail, fail, pass. The two failures were different tests in
+  different projects (`9. publishing queues a delivery` on mobile, then `2. the
+Owner creates a service account` on desktop), each passing on its own
+  immediately afterwards, and the suite is `serial` so one failure skips the
+  rest. Two different tests failing in two different projects is the signature
+  of timing, not of the security change — but that was not proved by re-running
+  the suite on the previous commit, so it is a reading of the evidence rather
+  than a finding. Vite logs `ws proxy socket error: ECONNRESET` throughout,
+  which may or may not be related. Worth chasing before anyone trusts a red CI
+  run.
 - **The backup tooling has not been run inside Docker.** `pnpm backup` /
   `backup:verify` / `restore` were exercised against a real PostgreSQL 18 on
   the host — round trip, and each refusal — but Docker was not running when
@@ -178,9 +195,13 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   is signed with the body, and where a webhook may not point
 - `docs/architecture/calls.md` — what Atarimae refuses to carry, and why a call
   provider may point inside the network when a webhook may not
+- `docs/architecture/security.md` — why clickjacking, of all things, is the
+  attack this product actually has to care about
 - `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.
+- `docs/engineering/m6a-security.md` — the sign-in rate limit that could be
+  bypassed with one header, and the two absences beside it.
 - `docs/engineering/m3a-interface.md` — what building the chat interface found,
   and the hazards it was written against.
 - `docs/engineering/docker-first-build.md` — three defects the first-ever image

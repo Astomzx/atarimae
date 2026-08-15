@@ -14,6 +14,7 @@ import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerRealtime } from "./plugins/realtime.js";
+import { registerSecurityHeaders } from "./plugins/security-headers.js";
 import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
@@ -86,8 +87,17 @@ export async function buildApp({
         censor: "[redacted]",
       },
     },
-    // Trust the reverse proxy for client IPs, which audit_logs records.
-    trustProxy: config.NODE_ENV === "production",
+    /*
+     * Only the addresses an operator has named, and by default none.
+     *
+     * This used to be `NODE_ENV === "production"`, which trusts any
+     * X-Forwarded-For from anyone. `request.ip` is what the sign-in rate limit
+     * is keyed on and what audit_logs records, so that turned "ten attempts per
+     * address" into "unlimited attempts, and the log will say whatever you
+     * like" for anything reachable without a proxy in front — which is what
+     * docker-compose publishes by default.
+     */
+    trustProxy: config.TRUSTED_PROXY_IPS ?? false,
     bodyLimit: 1_048_576,
     ajv: {
       // Without this, `format: "uuid"` in a route schema is silently ignored
@@ -139,6 +149,14 @@ export async function buildApp({
   );
 
   registerErrorHandler(app, { spaFallback: config.WEB_DIST_PATH !== undefined });
+
+  /*
+   * Registered before anything that answers, and never skipped under test.
+   * An `onSend` hook applies to error responses and to the static files too,
+   * which is the point: the headers must not depend on which branch produced
+   * the reply.
+   */
+  registerSecurityHeaders(app);
 
   await app.register(cors, {
     origin: config.PUBLIC_ORIGIN,

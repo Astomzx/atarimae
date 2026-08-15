@@ -26,6 +26,25 @@ const ConfigSchema = Type.Object({
   /** Origin of the web client. Used for CORS and for links inside emails. */
   PUBLIC_ORIGIN: Type.String({ format: "uri", default: "http://localhost:5173" }),
 
+  /**
+   * Addresses whose `X-Forwarded-For` may be believed — the reverse proxy's
+   * own, as a comma-separated list of IPs or CIDR ranges.
+   *
+   * Unset means believe nobody, and that is the deliberate default. The header
+   * is set by whoever sends the request, so trusting it unconditionally hands
+   * every client the ability to choose its own identity — and `request.ip` is
+   * what the sign-in rate limit is keyed on and what `audit_logs` records. Ten
+   * attempts per address becomes unlimited attempts the moment the address is
+   * a field the attacker fills in.
+   *
+   * The cost of the safe default is visible: behind a proxy, every client looks
+   * like the proxy, so the whole office shares one rate-limit budget and the
+   * audit log records one address. That is annoying, and being annoying is the
+   * point — the other failure is silent, and a rate limit nobody knows is
+   * bypassed is worse than one everybody can see is too strict.
+   */
+  TRUSTED_PROXY_IPS: Type.Optional(Type.String()),
+
   /** `<keyId>:<base64 32 bytes>`. See packages/secret-store. */
   ENCRYPTION_KEY_CURRENT: Type.String({ minLength: 1 }),
   ENCRYPTION_KEY_PREVIOUS: Type.Optional(Type.String()),
@@ -74,6 +93,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     HOST: env["HOST"],
     DATABASE_URL: env["DATABASE_URL"],
     PUBLIC_ORIGIN: env["PUBLIC_ORIGIN"],
+    TRUSTED_PROXY_IPS: env["TRUSTED_PROXY_IPS"],
     ENCRYPTION_KEY_CURRENT: env["ENCRYPTION_KEY_CURRENT"],
     ENCRYPTION_KEY_PREVIOUS: env["ENCRYPTION_KEY_PREVIOUS"],
     SESSION_SECRET: env["SESSION_SECRET"],
@@ -106,6 +126,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
           `Generate real secrets with:\n\n  node scripts/setup-env.mjs --force\n`,
       );
     }
+  }
+
+  if (config.NODE_ENV === "production" && !config.TRUSTED_PROXY_IPS) {
+    // Said out loud because both outcomes are wrong in a way nobody would
+    // notice from the outside: behind a proxy the whole office shares one
+    // rate-limit budget, and directly exposed the header would be a lie
+    // anybody could tell.
+    console.warn(
+      "[config] TRUSTED_PROXY_IPS is not set, so X-Forwarded-For is ignored. " +
+        "If Atarimae is behind a reverse proxy, set it to the proxy's address " +
+        "or every client will share one rate-limit budget and audit_logs will " +
+        "record the proxy for everybody.",
+    );
   }
 
   if (config.NODE_ENV === "production" && config.HOST === "127.0.0.1") {

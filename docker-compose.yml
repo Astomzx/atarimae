@@ -58,6 +58,12 @@ services:
       # can act on.
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
 
+      # Your reverse proxy's address, if there is one. Unset means
+      # X-Forwarded-For is ignored — which is correct for the published port
+      # below, because that header is set by whoever sends the request and
+      # `request.ip` is what the sign-in rate limit is keyed on.
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+
       # LOSING THIS KEY PERMANENTLY DESTROYS every stored external credential
       # (the SMTP password). Back it up alongside — but never inside — your
       # database dumps.

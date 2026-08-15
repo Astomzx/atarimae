@@ -169,25 +169,58 @@ docker compose exec app node scripts/db.mjs status
 
 ## Backups
 
-Two things must be backed up, **separately**:
-
-**The database.**
-
 ```bash
-docker compose exec -T db pg_dump -U atarimae atarimae | gzip > atarimae-$(date +%F).sql.gz
+docker compose exec app pnpm backup --out /var/lib/atarimae/backups/atarimae-$(date +%F).tar.gz
 ```
 
-**`ENCRYPTION_KEY_CURRENT`, from `.env`**, stored somewhere other than the
-database backup.
+That writes one archive holding the database **and** every uploaded file, and it
+checks the two agree before writing anything. `/var/lib/atarimae/backups` is a
+bind mount, so the file lands in `./backups` on the host — set `BACKUP_DIR` in
+`.env` to put it somewhere else.
+
+A backup of the database alone is the mistake this command exists to prevent:
+it restores to a system that starts, signs people in and shows the paperclip on
+every message, and produces a broken download the first time somebody clicks
+one.
+
+**`ENCRYPTION_KEY_CURRENT`, from `.env`, is deliberately not in the archive.**
+It decrypts the stored SMTP password, and a file containing both the ciphertext
+and the key protects nothing. Store it somewhere the archives are not. The
+backup command prints this every time it succeeds.
+
+### Checking one
+
+```bash
+docker compose exec app pnpm backup:verify /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
+```
+
+Reads the archive and nothing else — safe to run against last night's backup on
+a live system, at any time. It reports the row counts it holds, and fails if any
+file is truncated, altered or missing.
 
 ### Restoring
 
 ```bash
-gunzip -c atarimae-2026-08-07.sql.gz | docker compose exec -T db psql -U atarimae atarimae
+docker compose exec app pnpm restore /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
 ```
 
-A backup you have never restored is not a backup. Try it once, on a spare
-machine, before you need it.
+The archive is verified in full before a byte is written. The target database
+must be empty; add `--force` to drop every table in the `public` schema first,
+which has no undo. Afterwards the restored database is compared against the
+archive's own row counts, table by table, and the attachments on disk are
+reconciled against the rows that refer to them.
+
+Then check whether the archive predates the running code:
+
+```bash
+docker compose exec app node scripts/db.mjs status
+```
+
+A backup you have never restored is not a backup. `backup:verify` proves an
+archive is complete; it cannot prove the dump is meaningful. Try a real restore
+once, on a spare machine, before you need it.
+
+See `docs/architecture/backup.md` for why it is built this way.
 
 ---
 
@@ -235,6 +268,7 @@ docker compose logs -f app
 Stated plainly so nothing is a surprise:
 
 - **No TLS.** Use a reverse proxy.
-- **No automatic backups.** Set up your own schedule.
+- **No backup schedule.** `pnpm backup` is one verified backup; `cron` is
+  better at deciding when. Nothing here runs it for you.
 - **No high availability.** One application container, one database.
 - **No official support.** See the project status section of the README.

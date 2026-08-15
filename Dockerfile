@@ -29,6 +29,7 @@ COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
 COPY packages/api-schema/package.json ./packages/api-schema/
 COPY packages/secret-store/package.json ./packages/secret-store/
+COPY packages/backup/package.json ./packages/backup/
 COPY e2e/package.json ./e2e/
 
 RUN pnpm install --frozen-lockfile
@@ -39,6 +40,7 @@ COPY . .
 # packages' generated .d.ts files.
 RUN pnpm --filter @atarimae/secret-store build \
  && pnpm --filter @atarimae/api-schema build \
+ && pnpm --filter @atarimae/backup build \
  && pnpm --filter @atarimae/server build \
  && pnpm --filter @atarimae/web build
 
@@ -57,6 +59,25 @@ ENV PORT=3000
 ENV WEB_DIST_PATH=/app/apps/web/dist
 
 WORKDIR /app
+
+# PostgreSQL's own client tools, for `pnpm backup` and `pnpm restore`.
+#
+# Version 18 specifically, from PGDG rather than Debian: bookworm ships 15, and
+# pg_dump refuses to dump a server newer than itself. That refusal is the good
+# outcome — the bad one is having no pg_dump in the image at all, which is what
+# this line exists to prevent, because a backup command that cannot run is
+# discovered at the moment somebody needs a backup.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
+ && install -d /usr/share/postgresql-common/pgdg \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+ && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-18 \
+ && apt-get purge -y --auto-remove curl \
+ && rm -rf /var/lib/apt/lists/*
 
 # Never run as root.
 RUN groupadd --system --gid 1001 atarimae \

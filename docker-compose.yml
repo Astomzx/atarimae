@@ -75,6 +75,12 @@ services:
       # `docker compose up --build`, and the database keeps rows pointing at
       # them — downloads that fail forever, with no error until somebody clicks.
       - attachments:/var/lib/atarimae/attachments
+
+      # Where `pnpm backup` writes. A bind mount rather than a named volume on
+      # purpose: a backup that only exists inside Docker is not a backup, and
+      # this is the one directory whose whole point is being copied off the
+      # machine. Override with BACKUP_DIR.
+      - ${BACKUP_DIR:-./backups}:/var/lib/atarimae/backups
     ports:
       - "${APP_PORT:-3000}:3000"
 

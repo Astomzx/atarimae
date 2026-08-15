@@ -66,6 +66,10 @@ pnpm dev            # API on :3000, web on :5173
 pnpm db:reset       # drop, recreate, migrate the dev database
 pnpm db:verify      # prove every migration is reversible
 pnpm db:new <name>  # scaffold a migration
+
+pnpm backup         # one archive: database + attachments, checked before writing
+pnpm backup:verify <file>       # read an archive, touch nothing else
+pnpm restore <file> [--force]   # put one back, then prove it matches
 ```
 
 `--test` on any `db:` command targets the test database.
@@ -77,6 +81,7 @@ apps/server    Fastify 5 + TypeBox, REST + OpenAPI 3.1, WebSocket
 apps/web       React 19 + Vite 6 + TanStack Query + react-router
 packages/api-schema    TypeBox schemas — single source of truth for types
 packages/secret-store  AES-256-GCM, only for credentials replayed elsewhere
+packages/backup        backup / verify / restore, and the archive format
 migrations     plain SQL, up and down
 e2e            Playwright
 docs/architecture   frozen model, technical decisions
@@ -89,24 +94,25 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State            |
-| ---------------------------------------------------------------- | ---------------- |
-| M0 foundation                                                    | done             |
-| M1 accounts, org units, permissions                              | done             |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done             |
-| M3a chat                                                         | done             |
-| M4 PWA + Tauri                                                   | done             |
-| M5 open API, webhooks, 通話 providers                            | done             |
-| M6a security, attachments, backup/restore                        | attachments done |
-| M6b documentation, screenshots, release                          | not started      |
+| Milestone                                                        | State              |
+| ---------------------------------------------------------------- | ------------------ |
+| M0 foundation                                                    | done               |
+| M1 accounts, org units, permissions                              | done               |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done               |
+| M3a chat                                                         | done               |
+| M4 PWA + Tauri                                                   | done               |
+| M5 open API, webhooks, 通話 providers                            | done               |
+| M6a security, attachments, backup/restore                        | security pass left |
+| M6b documentation, screenshots, release                          | not started        |
 
-350 server unit tests, 49 web unit tests, 14 desktop (Rust), 151 E2E,
-10 migrations. CI green.
+350 server unit tests, 49 web unit tests, 33 backup, 20 secret-store,
+14 desktop (Rust), 151 E2E, 10 migrations. CI green.
 
 ## Suggested order from here
 
-1. **The rest of M6a** — backup/restore, and the security pass. Attachments are
-   done; see `docs/architecture/attachments.md`.
+1. **The rest of M6a** — the security pass. Attachments and backup/restore are
+   done; see `docs/architecture/attachments.md` and
+   `docs/architecture/backup.md`.
 2. **M6b** — three-language README, screenshots, demo video, release.
 
 **The desktop client is not in the pnpm workspace.** `apps/desktop` has no
@@ -133,6 +139,12 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   `docs/engineering/docker-first-build.md`. Note that signing in needs TLS in
   front: cookies are `Secure` under `NODE_ENV=production`, which is correct and
   is what `docs/deployment/docker.md` describes.
+- **The backup tooling has not been run inside Docker.** `pnpm backup` /
+  `backup:verify` / `restore` were exercised against a real PostgreSQL 18 on
+  the host — round trip, and each refusal — but Docker was not running when
+  they were written, so the Dockerfile's new PGDG `postgresql-client-18` layer
+  and the `packages/backup` build step have only been read. Build the image
+  once and run `docker compose exec app pnpm backup` before trusting it.
 - **Attachments need a mounted volume in Docker.** `ATTACHMENT_ROOT` is a plain
   directory; `docker-compose.yml` declares the volume. Without it a rebuild
   destroys every uploaded file while the database keeps the rows pointing at
@@ -158,6 +170,8 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   trustworthy, constraint by constraint
 - `docs/architecture/attachments.md` — the four upload rules, the hole each one
   closes, and the limits stated plainly
+- `docs/architecture/backup.md` — why files are copied before the database is
+  dumped, and why the encryption key is not in the archive
 - `docs/architecture/service-accounts.md` — why an integration is not a person's
   token, and what a leaked token still cannot do
 - `docs/architecture/webhooks.md` — why delivery is an outbox, why the timestamp

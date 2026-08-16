@@ -90,6 +90,38 @@ the preview was running `apps/server/dist`, built before the plugin existed.
 Nothing was wrong with the code and everything was wrong with the conclusion
 that would have been drawn from unit tests alone.
 
+### The follow-on defect the fix introduced
+
+`TRUSTED_PROXY_IPS` went straight from the environment to Fastify, which hands
+it to proxy-addr. So a trailing comma — `TRUSTED_PROXY_IPS=10.0.0.1,` — killed
+the server at startup with:
+
+```
+invalid IP address:
+```
+
+No variable name, no entry, and no offending text at all, because the empty
+segment between the comma and the end _was_ the problem. A space after a comma
+was fine; a space on its own was fatal. `config.ts` exists precisely so that a
+misconfigured deployment fails immediately and says what to fix, and a setting
+added later does not get an exemption from the file's own rule.
+
+Found by asking what Docker Compose actually passes. `${TRUSTED_PROXY_IPS:-}`
+sets the variable to an empty string rather than leaving it out, so "unset"
+arrives as `""` — which turned out to behave identically to `false`, so the
+default was safe. The neighbouring spellings were not.
+
+**The fix.** `parseTrustedProxies` trims entries, drops empty ones, treats
+"nothing left" as trusting nobody, and validates the rest as an address, a CIDR
+range with a plausible prefix length, or one of proxy-addr's keywords. An
+invalid entry is quoted back with an example of the right shape.
+
+**The guard.** `config.test.ts`, 14 cases — empty, whitespace, bare separators,
+trailing comma, spaces around separators, IPv6, CIDR, keyword, hostname, an
+over-wide prefix, and that the error names the variable. Verified against a
+real `buildApp` as well: the three tolerated spellings start the server, the
+invalid one is refused before it can.
+
 ## 3. Rate limiting had never been observed to work
 
 **The debt.** `app.ts` skips the rate limit plugin entirely when

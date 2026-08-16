@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 // Registers the shared format validators (uri, uuid, date-time, email).
 import "@atarimae/api-schema";
 import { Type, type Static } from "@sinclair/typebox";
@@ -85,6 +87,62 @@ export type Config = Static<typeof ConfigSchema>;
 
 const PLACEHOLDER = /REPLACE_ME/i;
 
+/** proxy-addr's own names for well-known ranges. Passed through untouched. */
+const PROXY_KEYWORDS = new Set(["loopback", "linklocal", "uniquelocal"]);
+
+/**
+ * Turns what somebody wrote into something proxy-addr will accept, or explains
+ * why it cannot.
+ *
+ * Returns `undefined` for "trust nobody", which is what an unset value, an
+ * empty string and a string of only separators all mean. Docker Compose is the
+ * reason the empty case matters: `${TRUSTED_PROXY_IPS:-}` sets the variable to
+ * an empty string rather than leaving it out, so "unset" arrives as `""`.
+ */
+function parseTrustedProxies(raw: string | undefined): string | undefined {
+  if (raw === undefined) return undefined;
+
+  const entries = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+
+  if (entries.length === 0) return undefined;
+
+  const invalid = entries.filter((entry) => !isTrustedProxyEntry(entry));
+  if (invalid.length > 0) {
+    throw new Error(
+      `TRUSTED_PROXY_IPS contains ${invalid.length} entry that is not an ` +
+        `address, a CIDR range or a known keyword:\n\n` +
+        invalid.map((entry) => `  ${entry}`).join("\n") +
+        `\n\nIt names the addresses whose X-Forwarded-For may be believed — ` +
+        `your reverse\nproxy's own. For example:\n\n` +
+        `  TRUSTED_PROXY_IPS=172.18.0.0/16\n` +
+        `  TRUSTED_PROXY_IPS=127.0.0.1,10.0.0.7\n\n` +
+        `Leave it unset if nothing sits in front of Atarimae.\n`,
+    );
+  }
+
+  return entries.join(",");
+}
+
+function isTrustedProxyEntry(entry: string): boolean {
+  if (PROXY_KEYWORDS.has(entry)) return true;
+
+  const slash = entry.lastIndexOf("/");
+  if (slash === -1) return isIP(entry) !== 0;
+
+  const address = entry.slice(0, slash);
+  const prefix = entry.slice(slash + 1);
+  const version = isIP(address);
+  if (version === 0) return false;
+
+  // A prefix length that is not a number, or wider than the address family
+  // allows, is a typo rather than a range.
+  if (!/^\d{1,3}$/.test(prefix)) return false;
+  return Number(prefix) <= (version === 4 ? 32 : 128);
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   // Coerces PORT from string to number and fills in defaults.
   const candidate = Value.Convert(ConfigSchema, {
@@ -116,6 +174,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
 
   const config = withDefaults;
+
+  /*
+   * Normalised and checked here, because the alternative is that Fastify hands
+   * it to proxy-addr, which throws `invalid IP address: ` — no mention of
+   * TRUSTED_PROXY_IPS, no mention of which entry, and for a trailing comma no
+   * offending text at all, since the empty segment *is* the problem.
+   *
+   * A misconfigured deployment must fail immediately and say what to fix. That
+   * rule is the whole reason this file exists, and a setting added later does
+   * not get an exemption from it.
+   */
+  const trusted = parseTrustedProxies(config.TRUSTED_PROXY_IPS);
+  if (trusted === undefined) delete config.TRUSTED_PROXY_IPS;
+  else config.TRUSTED_PROXY_IPS = trusted;
 
   // Placeholders pass schema validation but would silently produce a system
   // whose secrets are publicly known from the repository.

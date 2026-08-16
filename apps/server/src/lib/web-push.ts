@@ -19,8 +19,8 @@
  */
 
 import {
-  constants,
   createCipheriv,
+  createDecipheriv,
   createECDH,
   createHmac,
   createPrivateKey,
@@ -260,7 +260,11 @@ export function audienceFor(endpoint: string): string {
  * evidence that the encryption is correct, and a round trip that lives outside
  * the test file cannot quietly stop being run.
  */
-export function decryptPayload(body: Buffer, clientPrivate: Buffer, auth: Buffer): string {
+export function decryptPayload(
+  body: Buffer,
+  clientPrivate: Buffer,
+  auth: Buffer,
+): string {
   const salt = body.subarray(0, SALT_BYTES);
   const keyLength = body[SALT_BYTES + 4];
   if (keyLength !== P256_PUBLIC_BYTES) {
@@ -288,7 +292,7 @@ export function decryptPayload(body: Buffer, clientPrivate: Buffer, auth: Buffer
   const tag = ciphertext.subarray(ciphertext.length - 16);
   const sealed = ciphertext.subarray(0, ciphertext.length - 16);
 
-  const decipher = createCipheriv("aes-128-gcm", cek, nonce);
+  const decipher = createDecipheriv("aes-128-gcm", cek, nonce);
   decipher.setAuthTag(tag);
   const plaintext = Buffer.concat([decipher.update(sealed), decipher.final()]);
 
@@ -296,6 +300,3 @@ export function decryptPayload(body: Buffer, clientPrivate: Buffer, auth: Buffer
   const delimiter = plaintext.lastIndexOf(0x02);
   return plaintext.subarray(0, delimiter).toString("utf8");
 }
-
-/** Unused today; kept so the import of `constants` is not mistaken for dead. */
-export const CRYPTO_OK = typeof constants.OPENSSL_VERSION_NUMBER === "number";

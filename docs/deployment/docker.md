@@ -112,8 +112,23 @@ server {
 }
 ```
 
-`X-Forwarded-For` matters: without it every audit log entry records the proxy's
-address instead of the user's.
+`X-Forwarded-For` matters, and **setting it in the proxy is only half of it.**
+Atarimae ignores that header unless you also name the proxy:
+
+```bash
+TRUSTED_PROXY_IPS=127.0.0.1
+```
+
+Use the address the proxy connects _from_, as seen by the application — its own
+IP, or a CIDR range. On the compose network that is usually the Docker bridge,
+e.g. `172.18.0.0/16`.
+
+Without it, every audit log entry records the proxy instead of the user, and
+the whole office shares one sign-in rate-limit budget. **With it set to the
+wrong thing — or with the port exposed directly and no proxy at all — anyone
+can choose their own address by sending the header**, which makes the sign-in
+rate limit unenforceable and the audit log untrustworthy. That is why the
+default is to believe nobody; see `docs/architecture/security.md`.
 
 ---
 
@@ -170,13 +185,17 @@ docker compose exec app node scripts/db.mjs status
 ## Backups
 
 ```bash
-docker compose exec app pnpm backup --out /var/lib/atarimae/backups/atarimae-$(date +%F).tar.gz
+docker compose exec app node packages/backup/dist/cli.js backup --out /var/lib/atarimae/backups/atarimae-$(date +%F).tar.gz
 ```
 
 That writes one archive holding the database **and** every uploaded file, and it
 checks the two agree before writing anything. `/var/lib/atarimae/backups` is a
 bind mount, so the file lands in `./backups` on the host — set `BACKUP_DIR` in
 `.env` to put it somewhere else.
+
+(`node …/cli.js` rather than `pnpm backup`, for the same reason migrations are
+run as `node scripts/db.mjs`: the runtime image has Node and no package manager.
+From a checkout on your own machine, `pnpm backup` is the same command.)
 
 A backup of the database alone is the mistake this command exists to prevent:
 it restores to a system that starts, signs people in and shows the paperclip on
@@ -191,7 +210,7 @@ backup command prints this every time it succeeds.
 ### Checking one
 
 ```bash
-docker compose exec app pnpm backup:verify /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
+docker compose exec app node packages/backup/dist/cli.js verify /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
 ```
 
 Reads the archive and nothing else — safe to run against last night's backup on
@@ -201,7 +220,7 @@ file is truncated, altered or missing.
 ### Restoring
 
 ```bash
-docker compose exec app pnpm restore /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
+docker compose exec app node packages/backup/dist/cli.js restore /var/lib/atarimae/backups/atarimae-2026-08-16.tar.gz
 ```
 
 The archive is verified in full before a byte is written. The target database

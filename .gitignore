@@ -41,6 +41,11 @@ pnpm-debug.log*
 var/
 uploads/
 
+# Where docker-compose bind-mounts `pnpm backup` output. An archive holds a
+# full database dump — password hashes, every message, every attachment — so
+# this is one directory that must never be committed by accident.
+backups/
+
 # Rust build output for the desktop client. Cargo.lock IS committed — it is a
 # binary crate, and a reproducible build is the point.
 apps/desktop/src-tauri/target/

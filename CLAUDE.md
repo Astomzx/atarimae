@@ -138,6 +138,20 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
+- **One test database, and nothing stops two checkouts sharing it.** A git
+  worktree — an agent's, or your own — copies `.env`, so its `pnpm test:e2e`
+  and your `pnpm test` point `TEST_DATABASE_URL` at the _same_ database. The E2E
+  API server runs with `NODE_ENV` unset for the worker, so it polls and drains
+  while your unit tests are asserting on the same rows.
+  This is not theoretical: it produced 25 failures scattered across org units,
+  invitations, reminders and identity, then 369/369 a minute later, and looked
+  exactly like a suite that was not idempotent across runs. Whether it also is
+  that is now simply **unknown** — every measurement taken while chasing it was
+  contaminated, including the ones that seemed to rule the M6a test files in and
+  out. Before believing a red unit-test run, check nothing else is running:
+  `Get-CimInstance Win32_Process -Filter "Name='node.exe'"`, and look for a
+  `.claude/worktrees/` path. A per-checkout `TEST_DATABASE_URL` would end this
+  whole class of confusion and has not been done.
 - **The Docker image builds and runs.** No longer a gap: Docker is installed
   here now, `docker compose up -d --build` works from a clean checkout, both
   containers reach healthy, all migrations apply inside the container and the
@@ -156,12 +170,14 @@ Owner creates a service account` on desktop), each passing on its own
   than a finding. Vite logs `ws proxy socket error: ECONNRESET` throughout,
   which may or may not be related. Worth chasing before anyone trusts a red CI
   run.
-- **The backup tooling has not been run inside Docker.** `pnpm backup` /
-  `backup:verify` / `restore` were exercised against a real PostgreSQL 18 on
-  the host — round trip, and each refusal — but Docker was not running when
-  they were written, so the Dockerfile's new PGDG `postgresql-client-18` layer
-  and the `packages/backup` build step have only been read. Build the image
-  once and run `docker compose exec app pnpm backup` before trusting it.
+- **Backup works inside Docker too.** No longer a gap: the image builds with the
+  PGDG `postgresql-client-18` layer, `pg_dump` is 18.6, `packages/backup`
+  resolves its own `pg` (it is the first workspace package with a runtime
+  dependency, so that symlink layout had never been exercised), and an archive
+  written in the container lands on the host via the `./backups` bind mount and
+  reads back with `verify`. It found a fourth defect on the way — every
+  documented backup command said `pnpm`, which is not in the runtime image. See
+  `docs/engineering/docker-first-build.md`.
 - **Attachments need a mounted volume in Docker.** `ATTACHMENT_ROOT` is a plain
   directory; `docker-compose.yml` declares the volume. Without it a rebuild
   destroys every uploaded file while the database keeps the rows pointing at

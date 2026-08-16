@@ -129,10 +129,11 @@ Debian bookworm ships 15, and a pg_dump older than its server refuses outright.
 That refusal is the good outcome; the bad one is no `pg_dump` in the image at
 all, discovered at the moment somebody needs a backup.
 
-**That Dockerfile change has not been built yet.** Docker was not running on the
-machine where this was written, so the PGDG apt lines and the `packages/backup`
-build step are the one part of this feature that has only been read, not run.
-Everything above was exercised against a real PostgreSQL 18 outside a container.
+Verified by building the image and running the commands inside it: 18.6 from
+PGDG, an archive written to the bind mount and read back by `verify`. That build
+also found that every backup command in `docs/deployment/docker.md` was
+unrunnable — they said `pnpm`, and the runtime image has Node and no package
+manager. See `docs/engineering/docker-first-build.md`.
 
 ## Deliberately not done
 

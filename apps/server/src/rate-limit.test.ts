@@ -14,9 +14,14 @@ import { loadConfig } from "./config.js";
  * seen work, and "the config object says max: 10" is not evidence that a
  * request is ever refused.
  *
- * So this builds a second app with NODE_ENV forced to "development", which is
- * the only difference — the plugin registers, and the same route configuration
- * the real server uses is exercised against it.
+ * So this builds its own app with `rateLimit: true` and NODE_ENV left as
+ * "test". The plugin registers and the same route configuration the real
+ * server uses is exercised against it — and nothing else changes.
+ *
+ * The narrowness is the point, and was learned the hard way: an earlier version
+ * set `NODE_ENV: "development"` instead, which also started two notification
+ * workers that polled and drained the outbox of the database every other test
+ * file shares. The failures landed in reminders, invitations and org units.
  */
 
 /** Trusts the address `app.inject` actually connects from, so headers count. */
@@ -29,10 +34,13 @@ let app: FastifyInstance;
 let unproxied: FastifyInstance;
 
 beforeAll(async () => {
-  const base = { ...loadConfig(), NODE_ENV: "development" as const };
+  const base = loadConfig();
 
-  app = await buildApp({ config: { ...base, TRUSTED_PROXY_IPS: PROXY } });
-  unproxied = await buildApp({ config: base });
+  app = await buildApp({
+    config: { ...base, TRUSTED_PROXY_IPS: PROXY },
+    rateLimit: true,
+  });
+  unproxied = await buildApp({ config: base, rateLimit: true });
 
   await Promise.all([app.ready(), unproxied.ready()]);
 });
@@ -152,28 +160,49 @@ describe("first-run setup is rate limited", () => {
    * Five per fifteen minutes. Brute-forcing this is pointless once an Owner
    * exists, but it is an unauthenticated endpoint doing Argon2 work, which is
    * enough on its own.
+   *
+   * The payload is deliberately invalid, and that is the whole trick. The rate
+   * limiter runs on `onRequest`, before validation, so a rejected body still
+   * spends the budget — while a *valid* one would succeed five times and leave
+   * five real Owners in a database every other test file shares. Setup stops
+   * working once an Owner exists, so the damage surfaces as some later file
+   * being unable to create its own first Owner and failing on a missing session
+   * cookie, with nothing pointing back here.
+   *
+   * That is not hypothetical: the first version of this test did exactly that,
+   * and cost a confusing half hour in `csv.test.ts`.
    */
-  it("refuses the sixth attempt", async () => {
+  it("refuses the sixth attempt, and creates nothing on the way", async () => {
     const ip = "203.0.113.20";
+
+    const countUsers = async () => {
+      const { rows } = await app.db.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM users",
+      );
+      return Number(rows[0]?.count);
+    };
 
     const attempt = () =>
       app.inject({
         method: "POST",
         url: "/api/v1/setup/owner",
         headers: from(ip),
-        payload: {
-          organizationName: "第一営業所",
-          displayName: "管理者",
-          email: `owner-${Math.random()}@example.test`,
-          password: "correct horse battery staple",
-        },
+        payload: { organizationName: "" },
       });
 
+    // Whatever earlier files left behind is not this test's business; that the
+    // number does not move is.
+    const before = await countUsers();
+
     for (let count = 1; count <= 5; count += 1) {
-      expect((await attempt()).statusCode, `attempt ${count}`).not.toBe(429);
+      const response = await attempt();
+      expect(response.statusCode, `attempt ${count}`).not.toBe(429);
+      // Refused for being malformed, never accepted.
+      expect(response.statusCode, `attempt ${count}`).not.toBe(201);
     }
 
     expect((await attempt()).statusCode).toBe(429);
+    expect(await countUsers()).toBe(before);
   });
 });
 

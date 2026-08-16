@@ -2,9 +2,16 @@
 /**
  * Backup, verify and restore.
  *
+ * From a checkout:
+ *
  *   pnpm backup [--out <file>]      write a verified archive
  *   pnpm backup:verify <file>       check an archive without touching anything
  *   pnpm restore <file> [--force]   put one back
+ *
+ * Inside the container there is no package manager, so it is
+ * `node packages/backup/dist/cli.js backup` — the same convention as
+ * `node scripts/db.mjs up`. Every message this program prints picks the right
+ * form for wherever it is running; see `runAs`.
  *
  * The archive is a gzipped tar holding a manifest, a plain-SQL dump and every
  * attachment. Deliberately one file: two things that must be copied together
@@ -34,6 +41,7 @@ import {
   type ArchivedFile,
   type Manifest,
 } from "./manifest.js";
+import { runAs } from "./invocation.js";
 import { describeReconcile, reconcile } from "./reconcile.js";
 import { createTar, readTar } from "./tar.js";
 
@@ -359,7 +367,7 @@ async function backup(argv: string[], root: string): Promise<void> {
         "inconsistent, and those downloads are already broken. Writing the\n" +
         "archive anyway would preserve the breakage without recording it.\n\n" +
         "Fix it, or take the backup as-is and accept it knowingly:\n\n" +
-        "  pnpm backup --allow-missing-attachments",
+        `  ${runAs("backup")} --allow-missing-attachments`,
     );
   }
 
@@ -518,7 +526,7 @@ function describeArchive(manifest: Manifest): void {
 
 function verify(argv: string[]): void {
   const path = argv.find((argument) => !argument.startsWith("--"));
-  if (!path) fail("Usage: pnpm backup:verify <file>");
+  if (!path) fail(`Usage: ${runAs("verify")} <file>`);
 
   const { manifest, attachments } = open(resolve(path));
 
@@ -545,7 +553,7 @@ function verify(argv: string[]): void {
 
 async function restore(argv: string[], root: string): Promise<void> {
   const path = argv.find((argument) => !argument.startsWith("--"));
-  if (!path) fail("Usage: pnpm restore <file> [--force]");
+  if (!path) fail(`Usage: ${runAs("restore")} <file> [--force]`);
 
   const force = argv.includes("--force");
   const databaseUrl = required("DATABASE_URL");
@@ -585,7 +593,7 @@ async function restore(argv: string[], root: string): Promise<void> {
         "Restoring over a database with data in it is not something to do by\n" +
         "accident, so it is not the default. Either point DATABASE_URL at an\n" +
         "empty database, or say so:\n\n" +
-        "  pnpm restore <file> --force\n\n" +
+        `  ${runAs("restore")} <file> --force\n\n` +
         "--force drops every table in the public schema first. There is no undo.",
     );
   }
@@ -698,9 +706,12 @@ async function main(): Promise<void> {
     default:
       fail(
         "Usage:\n\n" +
-          "  pnpm backup [--out <file>]     write a verified archive\n" +
-          "  pnpm backup:verify <file>      check an archive, touching nothing\n" +
-          "  pnpm restore <file> [--force]  put one back",
+          `  ${runAs("backup")} [--out <file>]\n` +
+          "      write a verified archive\n\n" +
+          `  ${runAs("verify")} <file>\n` +
+          "      check an archive, touching nothing\n\n" +
+          `  ${runAs("restore")} <file> [--force]\n` +
+          "      put one back",
       );
   }
 }

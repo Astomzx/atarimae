@@ -115,7 +115,44 @@ exactly like a bug for about a minute.
 
 ---
 
+---
+
+## 4. Every documented backup command was unrunnable (found by the M6a build)
+
+Not from the first build — from the second, when M6a added backup and restore
+and the image gained a `postgresql-client-18` layer to support them.
+
+`docs/deployment/docker.md` told operators to run:
+
+```bash
+docker compose exec app pnpm backup --out /var/lib/atarimae/backups/...
+```
+
+There is no `pnpm` in the runtime image. The build stage runs `corepack enable`;
+the runtime stage is a fresh `node:24-bookworm-slim` that copies build output
+and nothing else. So all three documented commands — backup, verify and restore
+— failed immediately with `pnpm: not found`.
+
+**The same shape as defect 2 above**, and worth noticing that it recurred: a
+documented operational step, written from the perspective of a development
+checkout, that nobody had executed inside the container. The migration commands
+avoid it only because they were written as `node scripts/db.mjs up` after that
+earlier lesson.
+
+**The fix** is the same convention: `node packages/backup/dist/cli.js backup`.
+Adding `corepack enable` to the runtime image was the alternative and was not
+taken — the image should not carry a package manager it has no other use for,
+and the `node` form matches what the migration commands already do.
+
+There is no test for this, and that is the honest state of it: nothing in
+`pnpm check` runs a command inside a container. What catches it is building the
+image and running the documented steps, which is what happened here.
+
+---
+
 ## What is verified now
+
+From the first build:
 
 - The image builds from a clean checkout: `atarimae-app:latest`, 615 MB.
 - `db` and `app` both reach `Healthy`.
@@ -124,3 +161,15 @@ exactly like a bug for about a minute.
   first Owner can be created.
 - Attachments and database data are on named volumes, as
   `docs/architecture/attachments.md` requires.
+
+Added by the M6a build:
+
+- `pg_dump` and `psql` are present and are 18.6 from PGDG, not bookworm's 15.
+- `packages/backup` is in the image and resolves its own `pg` dependency —
+  it is the first workspace package with a runtime dependency, so the
+  `COPY /app/packages` plus `COPY /app/node_modules` symlink layout had never
+  actually been exercised before.
+- A backup taken inside the container writes a valid archive, and the bind
+  mount puts it on the host in `./backups`.
+- `verify` reads that archive back inside the container and reports the row
+  counts it holds.

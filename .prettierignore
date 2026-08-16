@@ -11,3 +11,10 @@ migrations/*.sql
 # contract, but formatted by the generator — prettier would fight it and CI's
 # drift check would never pass.
 apps/server/openapi.json
+
+# Scratch git worktrees. Ignored via .git/info/exclude, which prettier does not
+# read — so without this, `pnpm check` fails or passes depending on whether a
+# worktree happens to exist right now, and the file it complains about is a
+# second copy of the generated openapi.json ignored two lines above. A gate
+# whose result depends on what else is on the disk is not a gate.
+.claude/worktrees/

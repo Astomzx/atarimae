@@ -60,11 +60,24 @@ export interface BuildAppOptions {
   config: Config;
   /** Injected by tests so they can share a pool and roll back between cases. */
   database?: Database;
+  /**
+   * Whether to register the rate limiter. Defaults to "not under test".
+   *
+   * Separate from `NODE_ENV` so that `rate-limit.test.ts` can turn this one
+   * thing on without also turning on everything else a non-test environment
+   * implies. It used to build its app with `NODE_ENV: "development"`, which
+   * enabled the rate limiter *and* started two notification workers that then
+   * polled and drained the outbox of a database every other test file shares —
+   * failures scattered across reminders, invitations and org units, none of
+   * them near the cause.
+   */
+  rateLimit?: boolean;
 }
 
 export async function buildApp({
   config,
   database,
+  rateLimit: enableRateLimit,
 }: BuildAppOptions): Promise<FastifyInstance> {
   // Annotated explicitly: without it TypeScript resolves Fastify's overloads to
   // the HTTP/2 signature and every downstream instance type goes wrong.
@@ -172,8 +185,9 @@ export async function buildApp({
    */
   // Skipped entirely under test. `global: false` would not be enough: the
   // per-route `config.rateLimit` on sign-in and setup still applies, and the
-  // suite signs in dozens of times. Rate limiting gets dedicated coverage in M6.
-  if (config.NODE_ENV !== "test") {
+  // suite signs in dozens of times. `rate-limit.test.ts` opts back in via the
+  // `rateLimit` option rather than by pretending not to be a test.
+  if (enableRateLimit ?? config.NODE_ENV !== "test") {
     await app.register(rateLimit, {
       global: true,
       max: 300,

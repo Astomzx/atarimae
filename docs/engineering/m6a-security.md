@@ -133,11 +133,23 @@ and never once exercised.
 A protection disabled in every test is a protection nobody has seen work.
 `{ max: 10 }` in a config object is a claim, not evidence.
 
-**The guard.** `rate-limit.test.ts` builds a second app with `NODE_ENV` forced
-to `development`, which is the only difference, and drives the same route
-configuration the real server uses: the eleventh sign-in is refused, the refusal
-carries `Retry-After`, setup refuses the sixth, and the global ceiling is
-announced on ordinary responses so a client can see it coming.
+**The guard.** `rate-limit.test.ts` builds its own app with `rateLimit: true`
+and drives the same route configuration the real server uses: the eleventh
+sign-in is refused, the refusal carries `Retry-After`, setup refuses the sixth,
+and the global ceiling is announced on ordinary responses so a client can see it
+coming.
+
+`buildApp` grew that option because of what the first attempt did instead. It
+set `NODE_ENV: "development"`, which enables the rate limiter — and also starts
+the notification worker, two of which then polled and drained the outbox of the
+database every other test file shares. The failures landed in reminders,
+invitations and org units. Turning on one thing has to mean turning on one
+thing.
+
+The setup case sends a payload that fails validation, which is not a detail: the
+limiter runs on `onRequest`, before validation, so a rejected body still spends
+the budget, while a valid one would succeed five times and leave five real
+Owners behind for the next file to trip over.
 
 ## What was looked at and found already correct
 

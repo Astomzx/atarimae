@@ -142,7 +142,14 @@ Stated plainly so none of it is a surprise.
 - **No protection against a hostile administrator.** An Owner can read
   everything and change everything. The audit log records that they did, which
   is a different guarantee from preventing it.
-- **No dependency scanning in CI.** `pnpm audit` is not wired in.
+- ~~No dependency scanning in CI.~~ **Now wired in**, and it blocks rather than
+  warns: `pnpm audit --audit-level=moderate` runs beside the migration check.
+  It found three advisories on its first run — two of them `@fastify/static`,
+  which is what serves the web interface. The direct dependency was already on
+  a patched version; the vulnerable copy came through `@fastify/swagger-ui`,
+  which is registered only outside production but ships in the image either way.
+  Fixed by moving to `@fastify/swagger-ui` 6, with a documented `overrides`
+  entry in `pnpm-workspace.yaml` for a dev-only `nanoid` advisory.
 - **No penetration test.** Nobody has attacked this but its author.
 
 ## Testing it

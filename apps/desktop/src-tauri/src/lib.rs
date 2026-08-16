@@ -15,10 +15,11 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    menu::{Menu, MenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
+use tauri_plugin_autostart::ManagerExt;
 
 /// Long enough for a slow office VPN, short enough that a wrong address does
 /// not look like a hung application.
@@ -201,6 +202,7 @@ async fn forget(app: tauri::AppHandle) -> Result<(), String> {
 static QUITTING: AtomicBool = AtomicBool::new(false);
 
 const TRAY_SHOW: &str = "show";
+const TRAY_AUTOSTART: &str = "autostart";
 const TRAY_QUIT: &str = "quit";
 
 /// What a tray menu entry means.
@@ -213,6 +215,8 @@ const TRAY_QUIT: &str = "quit";
 enum TrayAction {
     /// Bring the window back, whether it is hidden or merely minimised.
     Show,
+    /// Start with Windows, or stop doing so. Off until somebody asks.
+    ToggleAutostart,
     /// Really exit — the only way out, now that closing hides.
     Quit,
 }
@@ -220,9 +224,29 @@ enum TrayAction {
 fn tray_action(id: &str) -> Option<TrayAction> {
     match id {
         TRAY_SHOW => Some(TrayAction::Show),
+        TRAY_AUTOSTART => Some(TrayAction::ToggleAutostart),
         TRAY_QUIT => Some(TrayAction::Quit),
         _ => None,
     }
+}
+
+/// Turns the registry entry on or off, and reports what it now is.
+///
+/// The checkbox is set from the manager rather than from what was clicked: the
+/// entry lives in the registry, where somebody else's cleanup tool may have
+/// removed it since the menu was built. A tick that says "on" over an entry
+/// that is gone is a setting the application only believes it has.
+fn toggle_autostart(app: &tauri::AppHandle) -> Result<bool, String> {
+    let launcher = app.autolaunch();
+
+    let enabled = launcher.is_enabled().map_err(|e| e.to_string())?;
+    if enabled {
+        launcher.disable().map_err(|e| e.to_string())?;
+    } else {
+        launcher.enable().map_err(|e| e.to_string())?;
+    }
+
+    launcher.is_enabled().map_err(|e| e.to_string())
 }
 
 /// Puts the one window in front, from wherever it happens to be.
@@ -246,8 +270,24 @@ fn show_main_window(app: &tauri::AppHandle) {
 /// still running and how to get it back.
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, TRAY_SHOW, "開く", true, None::<&str>)?;
+
+    // Read rather than remembered. Whether this application starts with Windows
+    // is a fact about the registry, not about anything this process stored.
+    let autostart = CheckMenuItem::with_id(
+        app,
+        TRAY_AUTOSTART,
+        "Windows 起動時に開く",
+        true,
+        app.autolaunch().is_enabled().unwrap_or(false),
+        None::<&str>,
+    )?;
+
     let quit = MenuItem::with_id(app, TRAY_QUIT, "終了", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &autostart, &quit])?;
+
+    // Moved into the click handler so the tick can be corrected from whatever
+    // the registry actually holds after a toggle.
+    let autostart_item = autostart.clone();
 
     TrayIconBuilder::with_id("main")
         .icon(
@@ -260,8 +300,26 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         // tray icon is expected to open the thing, not to explain itself.
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match tray_action(event.id.as_ref()) {
+        .on_menu_event(move |app, event| match tray_action(event.id.as_ref()) {
             Some(TrayAction::Show) => show_main_window(app),
+            Some(TrayAction::ToggleAutostart) => {
+                /*
+                 * The tick is set from what the registry now says, not from
+                 * what was clicked. If the write failed — a locked-down
+                 * machine, a policy, an antivirus product with opinions — the
+                 * menu must not claim a setting the system does not have.
+                 */
+                match toggle_autostart(app) {
+                    Ok(enabled) => {
+                        let _ = autostart_item.set_checked(enabled);
+                    }
+                    Err(error) => {
+                        let _ = autostart_item
+                            .set_checked(app.autolaunch().is_enabled().unwrap_or(false));
+                        eprintln!("could not change autostart: {error}");
+                    }
+                }
+            }
             Some(TrayAction::Quit) => {
                 QUITTING.store(true, Ordering::SeqCst);
                 app.exit(0);
@@ -301,6 +359,16 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_main_window(app);
         }))
+        /*
+         * Registers nothing with Windows on its own — it only makes the
+         * registry entry reachable from the tray. Nothing is added to startup
+         * until somebody ticks the box, because an application that puts
+         * itself there uninvited is one people uninstall.
+         */
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![connect, forget])
         .setup(|app| {
             let handle = app.handle();
@@ -422,7 +490,24 @@ mod tests {
     #[test]
     fn every_tray_id_maps_to_an_action() {
         assert_eq!(tray_action(TRAY_SHOW), Some(TrayAction::Show));
+        assert_eq!(
+            tray_action(TRAY_AUTOSTART),
+            Some(TrayAction::ToggleAutostart)
+        );
         assert_eq!(tray_action(TRAY_QUIT), Some(TrayAction::Quit));
+    }
+
+    /// Three entries, three distinct outcomes. Two ids mapping to the same
+    /// action would be a copy-paste that silently disables a menu entry.
+    #[test]
+    fn no_two_tray_ids_mean_the_same_thing() {
+        let ids = [TRAY_SHOW, TRAY_AUTOSTART, TRAY_QUIT];
+        for (index, left) in ids.iter().enumerate() {
+            for right in &ids[index + 1..] {
+                assert_ne!(left, right, "duplicate tray id");
+                assert_ne!(tray_action(left), tray_action(right), "duplicate action");
+            }
+        }
     }
 
     #[test]

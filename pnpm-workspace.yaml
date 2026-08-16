@@ -8,3 +8,20 @@ packages:
 # arbitrary code during `pnpm install`.
 allowBuilds:
   esbuild: true
+
+# Transitive versions forced up to a patched release, where the package that
+# depends on them has not yet moved. Each one is here because `pnpm audit` — now
+# part of CI — reported it, and each should be removed again the moment the
+# dependency above it catches up.
+#
+# nanoid: reached only through vitest -> vite -> postcss, so this is a
+# development-time dependency and never ships. Pinned anyway, because "it is
+# only the test toolchain" is exactly how a compromised package gets to run on
+# a machine that has the signing keys and the database password.
+# GHSA-2v37-7h3g-55p8, fixed in 3.3.18.
+#
+# Pinned inside the major version postcss expects. `>=3.3.18` resolves to 6.x,
+# which is a different package interface — an override that silently changes a
+# major version is a way to fix an advisory and break the build in one line.
+overrides:
+  nanoid: "^3.3.18"

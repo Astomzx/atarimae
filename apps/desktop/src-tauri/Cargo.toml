@@ -29,6 +29,11 @@ serde_json = "1"
 # moment either one reads something.
 tauri-plugin-single-instance = "2"
 
+# Start with Windows. Off by default and toggled from the tray, because an
+# application that adds itself to startup without being asked is one people
+# uninstall.
+tauri-plugin-autostart = "2"
+
 # For the reachability check before an address is saved. Rust does the request
 # rather than the webview because the connect screen is served from
 # `tauri://localhost`, and asking somebody's server from there is a

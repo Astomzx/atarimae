@@ -79,6 +79,21 @@ jobs:
       - name: Verify migrations are reversible
         run: node scripts/db.mjs verify
 
+      # Fails the build on a known advisory rather than reporting one.
+      #
+      # `security.md` listed this as not done, and wiring it up found three on
+      # the first run — two of them @fastify/static, which is what serves the
+      # web interface. The direct dependency was already patched; the vulnerable
+      # copy arrived through @fastify/swagger-ui, which is registered only
+      # outside production but ships in the image regardless.
+      #
+      # A warning nobody has to act on is a warning nobody acts on, so this
+      # blocks. When it fires for something with no patch available, the honest
+      # answer is a documented `overrides` entry in pnpm-workspace.yaml or an
+      # explicit decision recorded there — not a `|| true` on this line.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=moderate
+
       # The OpenAPI document is generated from the route schemas. If it drifts,
       # the committed document and the frontend client types are stale.
       - name: Check OpenAPI document is current

@@ -73,6 +73,14 @@ cannot be built, `setup` fails and the application does not start. An
 unquittable window is a worse outcome than a window that never opened, and this
 makes that state unreachable rather than unlikely.
 
+**Windows 起動時に開く** is the third entry, and it is off until somebody ticks
+it. Installing this application does not add it to startup — an application
+that puts itself there uninvited is one people uninstall. The tick is read from
+the registry when the menu is built and set from the registry again after a
+toggle, never from what was clicked: the entry lives somewhere a cleanup tool or
+a group policy can remove it, and a tick claiming a setting the system does not
+have is worse than no tick.
+
 ## Where things live
 
 ```
@@ -126,8 +134,6 @@ The commands are on the root package instead:
   and a second thing to keep in step with the server — the exact cost the rest
   of this document exists to avoid. It stays undone until it is worth that,
   and "the PWA gets push" will not by itself make it so.
-- **No launch at startup.** Easy, and nobody has asked for it. Unlike the tray
-  icon it does not have to exist for anything else to be honest.
 - **No code signing.** Windows will show SmartScreen on the installer. Signing
   needs a certificate the project does not have, and saying so is better than
   pretending the warning is a Windows bug.
@@ -148,6 +154,15 @@ What a unit test cannot reach is the window, so the window behaviour was
 checked against the running binary — closing it leaves the process alive and
 the window hidden rather than destroyed, and a second launch exits immediately
 and makes the first one's window visible again.
+
+**One thing is genuinely unverified.** Autostart's default was checked against
+the real registry — launching the application adds nothing to
+`HKCU\…\CurrentVersion\Run`, and quitting leaves nothing behind. What was not
+exercised is the toggle itself: a tray menu click cannot be driven from outside
+the process the way a window can be sent `WM_CLOSE`, and adding a command-line
+switch to the shipped binary purely so a test could reach it would be putting
+scaffolding in the product. So the registry write is the plugin's own, on the
+plugin's own testing, and this document does not claim otherwise.
 
 The webview itself is untested here on purpose: the shell loads a remote page,
 and that page is the web application, which already has 151 end-to-end tests of

@@ -110,6 +110,15 @@ export {
 } from "./calls.js";
 
 export {
+  AuditEntry,
+  AuditLogQuery,
+  ListAuditLogResponse,
+  ListMyAuditLogResponse,
+  MyAuditEntry,
+  MyAuditLogQuery,
+} from "./audit.js";
+
+export {
   CreateWebhookRequest,
   CreateWebhookResponse,
   ListWebhookDeliveriesResponse,

@@ -18,6 +18,7 @@ import { registerSecurityHeaders } from "./plugins/security-headers.js";
 import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
+import { auditRoutes } from "./routes/audit.js";
 import { callRoutes } from "./routes/calls.js";
 import { chatRoutes } from "./routes/chat.js";
 import { authRoutes } from "./routes/auth.js";
@@ -259,6 +260,7 @@ export async function buildApp({
       await api.register(serviceAccountRoutes);
       await api.register(webhookRoutes);
       await api.register(settingsRoutes);
+      await api.register(auditRoutes);
       await registerRealtime(api);
     },
     { prefix: "/api/v1" },

@@ -139,6 +139,23 @@ Stated plainly so none of it is a surprise.
   failure.
 - **No virus scanning of uploads.**
 - **No audit of reads.** `audit_logs` records changes, not who looked at what.
+- **No screen for the audit log, deliberately.** `GET /audit-logs` (admin) and
+  `GET /my/audit-logs` (anybody, own account only) exist and are tested, but
+  nothing in the interface calls them. The author's decision, made after the
+  server half landed: reading the log is left to whoever deploys this, through
+  the API or through SQL.
+
+  The cost is worth stating, because it is the thing the endpoints were built
+  to fix. `/my/audit-logs` was the honest answer to "an Owner can do anything
+  and only another Owner would notice" — it makes an administrator's actions
+  visible to the person they were done to. Without a screen, an ordinary member
+  cannot reach it, so for them that visibility does not exist. The guarantee
+  now stops at operators and integrations.
+
+  The endpoints stay rather than being reverted: they are what makes "leave it
+  to the deployer" achievable at all. The alternative to a screen should be an
+  API call, not a database login.
+
 - **No protection against a hostile administrator.** An Owner can read
   everything and change everything. The audit log records that they did, which
   is a different guarantee from preventing it.

@@ -11,6 +11,10 @@ the product's argument or only its convenience.
 
 Nothing here has been changed. That is the point.
 
+日本語版: `reconsidering.ja.md`. The two say the same thing; if they ever stop
+agreeing, the Japanese one is the one the author reads and therefore the one
+that is right.
+
 ---
 
 ## 1. Offline reading of announcements

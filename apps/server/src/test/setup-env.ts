@@ -9,6 +9,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { testDatabaseUrlFor } from "../../../../scripts/checkout.mjs";
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const ENV_FILE = join(ROOT, ".env");
 
@@ -23,7 +25,12 @@ if (!testUrl) {
   );
 }
 
-process.env["DATABASE_URL"] = testUrl;
+/**
+ * Per checkout, matching `scripts/db.mjs`. A second worktree running its own
+ * tests against the same database deletes rows out from under this one, and
+ * the failures it produces look like anything but their cause.
+ */
+process.env["DATABASE_URL"] = testDatabaseUrlFor(testUrl, ROOT);
 process.env["NODE_ENV"] = "test";
 process.env["LOG_LEVEL"] = "error";
 

@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { checkoutPortOffset, testDatabaseUrlFor } from "../scripts/checkout.mjs";
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const ENV_FILE = join(ROOT, ".env");
 
@@ -15,17 +17,39 @@ if (existsSync(ENV_FILE)) {
  * E2E runs against the *test* database, never the development one — these
  * tests create and delete data freely.
  */
-const testDatabaseUrl = process.env["TEST_DATABASE_URL"];
-if (!testDatabaseUrl) {
+const configuredTestUrl = process.env["TEST_DATABASE_URL"];
+if (!configuredTestUrl) {
   throw new Error(
     "TEST_DATABASE_URL is not set. Run `node scripts/setup-env.mjs`, then `pnpm db:test:reset`.",
   );
 }
 
-const WEB_PORT = 5273;
-const API_PORT = 3100;
+/**
+ * Per checkout, matching `scripts/db.mjs` and the server's test setup.
+ *
+ * This is the caller that made it necessary: an E2E run starts a real API
+ * server with a notification worker, and it keeps polling and draining for as
+ * long as the suite lasts. Pointed at a database another checkout is also
+ * using, it corrupts that one's unit tests continuously and invisibly.
+ */
+const testDatabaseUrl = testDatabaseUrlFor(configuredTestUrl, ROOT);
+
+/**
+ * Ports are per checkout too, and this is the more dangerous half.
+ *
+ * `reuseExistingServer` is on outside CI, which is what makes a second checkout
+ * silent rather than merely broken: it does not fail on a port already in use,
+ * it attaches to the *first* checkout's API server, runs against that tree's
+ * code and that tree's database, and reports a result about a repository it
+ * never read. A green run that proves nothing about your changes is worse than
+ * a red one.
+ */
+const PORT_OFFSET = checkoutPortOffset(ROOT);
+
+const WEB_PORT = 5273 + PORT_OFFSET;
+const API_PORT = 3100 + PORT_OFFSET;
 /** `vite preview`, serving the production build the PWA spec needs. */
-const PREVIEW_PORT = 5373;
+const PREVIEW_PORT = 5373 + PORT_OFFSET;
 const isCI = !!process.env["CI"];
 
 export default defineConfig({

@@ -19,6 +19,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
+import { testDatabaseUrlFor } from "./checkout.mjs";
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const MIGRATIONS_DIR = join(ROOT, "migrations");
 
@@ -51,12 +53,20 @@ function loadEnv() {
   );
 }
 
-/** Returns the connection string for the target database. */
+/**
+ * Returns the connection string for the target database.
+ *
+ * The test one is per checkout — `atarimae_test` in `.env` becomes
+ * `atarimae_test_<tag>` here, so a second worktree cannot delete this one's
+ * rows halfway through a run. The development database is left exactly as
+ * configured: it holds data somebody wants to keep, and moving it out from
+ * under them would be the opposite of helpful. See `checkout.mjs`.
+ */
 function targetUrl(useTest) {
   const key = useTest ? "TEST_DATABASE_URL" : "DATABASE_URL";
   const url = process.env[key];
   if (!url) fail(`${key} is not set in .env`);
-  return url;
+  return useTest ? testDatabaseUrlFor(url, ROOT) : url;
 }
 
 /**

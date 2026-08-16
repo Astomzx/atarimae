@@ -12,6 +12,13 @@ export default tseslint.config(
       "**/coverage/**",
       "**/playwright-report/**",
       "**/test-results/**",
+
+      // Scratch git worktrees. Ignored by git via .git/info/exclude, which
+      // eslint does not read — so without this, `pnpm check` reports errors
+      // from a second checkout's source, at paths that do not exist in this
+      // one. A gate whose result depends on what else is on the disk is not a
+      // gate. Same reasoning as the entry in .prettierignore.
+      ".claude/worktrees/**",
     ],
   },
 
@@ -93,8 +100,13 @@ export default tseslint.config(
   // Plain Node scripts: no tsconfig project, Node globals. The glob is not
   // anchored to the root — apps/desktop has its own scripts/, outside every
   // tsconfig for the same reason.
+  //
+  // The `.d.mts` is here too: `scripts/test-database.mjs` is imported by two
+  // TypeScript callers and hand-writes its own declarations, which sit outside
+  // every tsconfig `include` exactly as the implementation does. A declaration
+  // file has no logic for a type-aware rule to check.
   {
-    files: ["**/scripts/**/*.mjs", "*.js", "*.mjs"],
+    files: ["**/scripts/**/*.mjs", "**/scripts/**/*.d.mts", "*.js", "*.mjs"],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: {
       globals: globals.node,

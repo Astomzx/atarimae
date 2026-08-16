@@ -105,7 +105,7 @@ twice inside one response breaks Fastify's serializer.
 | M6a security, attachments, backup/restore                        | done        |
 | M6b documentation, screenshots, release                          | not started |
 
-369 server unit tests, 49 web unit tests, 33 backup, 20 secret-store,
+386 server unit tests, 49 web unit tests, 37 backup, 20 secret-store,
 14 desktop (Rust), 151 E2E, 10 migrations. CI green.
 
 ## Suggested order from here
@@ -138,20 +138,15 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
-- **One test database, and nothing stops two checkouts sharing it.** A git
-  worktree — an agent's, or your own — copies `.env`, so its `pnpm test:e2e`
-  and your `pnpm test` point `TEST_DATABASE_URL` at the _same_ database. The E2E
-  API server runs with `NODE_ENV` unset for the worker, so it polls and drains
-  while your unit tests are asserting on the same rows.
-  This is not theoretical: it produced 25 failures scattered across org units,
-  invitations, reminders and identity, then 369/369 a minute later, and looked
-  exactly like a suite that was not idempotent across runs. Whether it also is
-  that is now simply **unknown** — every measurement taken while chasing it was
-  contaminated, including the ones that seemed to rule the M6a test files in and
-  out. Before believing a red unit-test run, check nothing else is running:
-  `Get-CimInstance Win32_Process -Filter "Name='node.exe'"`, and look for a
-  `.claude/worktrees/` path. A per-checkout `TEST_DATABASE_URL` would end this
-  whole class of confusion and has not been done.
+- **Two checkouts no longer collide.** Was a gap, now fixed:
+  `scripts/checkout.mjs` derives a test database name _and_ an E2E port offset
+  from the checkout's own path, so a worktree that copied `.env` gets
+  `atarimae_test_zen_merkle_991a84_…` on its own ports instead of deleting this
+  one's rows mid-run. Four callers must agree —
+  `db.mjs`, `apps/server/src/test/setup-env.ts`, `e2e/playwright.config.ts` and
+  `e2e/fixtures/database.ts` — and the fourth was missed first time round,
+  which cost 122 skipped E2E tests. Add a fifth at your peril; there are tests.
+  See `docs/engineering/shared-test-database.md`.
 - **The Docker image builds and runs.** No longer a gap: Docker is installed
   here now, `docker compose up -d --build` works from a clean checkout, both
   containers reach healthy, all migrations apply inside the container and the
@@ -218,6 +213,9 @@ Owner creates a service account` on desktop), each passing on its own
   doing nothing.
 - `docs/engineering/m6a-security.md` — the sign-in rate limit that could be
   bypassed with one header, and the two absences beside it.
+- `docs/engineering/shared-test-database.md` — two checkouts on one database,
+  and how long it takes to notice that the measurement is the thing that is
+  broken.
 - `docs/engineering/m3a-interface.md` — what building the chat interface found,
   and the hazards it was written against.
 - `docs/engineering/docker-first-build.md` — three defects the first-ever image

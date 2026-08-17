@@ -203,3 +203,79 @@ self.addEventListener("fetch", (event) => {
     })(),
   );
 });
+
+// ---------------------------------------------------------------------------
+// Push
+// ---------------------------------------------------------------------------
+
+/**
+ * A notification the server encrypted to this device.
+ *
+ * The payload carries only a title, a line of body text and a path — never the
+ * announcement itself. A notification is shown by the operating system and can
+ * sit on a lock screen in a break room, so it says that something needs
+ * confirming and makes the person open the application to read it.
+ *
+ * `showNotification` is not optional. Every browser that delivers a push
+ * requires one to be shown, and a handler that decides a message is not worth
+ * displaying gets the subscription revoked for "silent push" — losing every
+ * future notification, not just this one.
+ */
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    // A message we cannot read still has to become a notification.
+  }
+
+  const title = payload.title || "Atarimae";
+  const body = payload.body || "確認が必要なお知らせがあります。";
+  const path = typeof payload.path === "string" ? payload.path : "/my/announcements";
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icon.svg",
+      badge: "/icon.svg",
+      lang: "ja",
+      // Replaces rather than stacks. Three reminders about the same roster on
+      // a lock screen is how people learn to swipe them away unread.
+      tag: path,
+      renotify: true,
+      data: { path },
+    }),
+  );
+});
+
+/**
+ * Opening the announcement, reusing a window if one is already open.
+ *
+ * A second window pointed at the same server is the desktop client's problem
+ * too, for the same reason: two copies disagree about what has been read.
+ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const path = (event.notification.data && event.notification.data.path) || "/";
+  const target = new URL(path, self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
+      for (const client of clients) {
+        if (new URL(client.url).origin === self.location.origin) {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(target);
+          return;
+        }
+      }
+
+      await self.clients.openWindow(target);
+    })(),
+  );
+});

@@ -110,6 +110,13 @@ export {
 } from "./calls.js";
 
 export {
+  PushErrorCode,
+  PushPublicKeyResponse,
+  PushSubscriptionStatus,
+  SubscribeToPushRequest,
+} from "./push.js";
+
+export {
   AuditEntry,
   AuditLogQuery,
   ListAuditLogResponse,

@@ -4,6 +4,7 @@ import { sweepUnclaimedAttachments } from "./attachment-sweep.js";
 import { endAbandonedCalls } from "./call-sweep.js";
 import { createMailer, loadSmtpSettings } from "./mailer.js";
 import { drainOutbox, reclaimStaleLocks } from "./notification-worker.js";
+import { createPushSender, loadVapidKeys, type PushSender } from "./push.js";
 import { queueDueReminders } from "./reminders.js";
 import { deliverPendingWebhooks, reclaimStaleWebhookLocks } from "./webhooks.js";
 
@@ -22,6 +23,29 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
   let running = false;
   let stopped = false;
 
+  /*
+   * Loaded once and kept, because the keypair is stable and reading it costs a
+   * decrypt. Not loaded at startup, though: the first tick may be the first
+   * time the database is reachable, and a worker that gave up on push because
+   * PostgreSQL was slow to accept connections would stay without push until
+   * somebody restarted it.
+   */
+  let push: PushSender | undefined;
+
+  const pushSender = async (): Promise<PushSender | undefined> => {
+    if (push) return push;
+    try {
+      const keys = await loadVapidKeys(app.db, app.secrets, app.config.PUBLIC_ORIGIN);
+      push = createPushSender(keys);
+      return push;
+    } catch (error) {
+      // Email must still go out. Push being unavailable is a degraded service,
+      // not a reason to stop draining the queue.
+      app.log.error({ err: error }, "could not load VAPID keys; push is disabled");
+      return undefined;
+    }
+  };
+
   const tick = async () => {
     // Skip rather than queue: a slow SMTP server must not build a backlog of
     // overlapping drains.
@@ -39,8 +63,11 @@ export function startNotificationWorker(app: FastifyInstance): () => void {
       const settings = await loadSmtpSettings(app.db);
       const mailer = createMailer(settings, app.secrets);
 
+      const sender = await pushSender();
+
       const result = await drainOutbox(app.db, mailer, {
         publicOrigin: app.config.PUBLIC_ORIGIN,
+        ...(sender ? { push: sender } : {}),
       });
 
       if (result.claimed > 0) {

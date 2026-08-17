@@ -83,10 +83,26 @@ beforeEach(async () => {
               user_org_units, org_units, users RESTART IDENTITY CASCADE`,
   );
 
-  const response = await app.inject({
+  await app.inject({
     method: "POST",
     url: "/api/v1/setup/owner",
     payload: { organizationName: "第一営業所", ...OWNER },
+  });
+
+  /*
+   * Signed in again with a device token, because that is what a browser does
+   * — `apps/web/src/api.ts` sends one on every login — and a subscription
+   * belongs to a device. A session without one cannot subscribe, deliberately.
+   */
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    payload: {
+      email: OWNER.email,
+      password: OWNER.password,
+      deviceToken: "pc-01HQ8XN3K7B2WYZ4M6R9TVDGFA",
+      deviceName: "オーナーのPC",
+    },
   });
   const header = String(response.headers["set-cookie"] ?? "");
   ownerCookie = `${SESSION_COOKIE}=${new RegExp(`${SESSION_COOKIE}=([^;]+)`).exec(header)![1]}`;
@@ -417,5 +433,169 @@ describe("the VAPID keypair", () => {
     expect(JSON.stringify(stored)).not.toContain(
       (await loadVapidKeys(app.db, app.secrets, "mailto:a@example.test")).privateKey,
     );
+  });
+});
+
+describe("subscribing a device", () => {
+  const subscription = () => ({
+    endpoint: `https://push.example.test/${randomBytes(8).toString("hex")}`,
+    keys: {
+      p256dh: createECDH("prime256v1").generateKeys().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+    },
+  });
+
+  it("is refused without a session", async () => {
+    const response = await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      payload: subscription(),
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("stores a subscription against the signed-in device", async () => {
+    const body = subscription();
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: body,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM push_subscriptions WHERE endpoint = $1 AND revoked_at IS NULL",
+        [body.endpoint],
+      ),
+    ).toBe(1);
+  });
+
+  /** Browsers rotate keys and re-send the same endpoint. That is not a new row. */
+  it("refreshes the keys rather than creating a second row", async () => {
+    const body = subscription();
+    await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: body,
+    });
+
+    const rotated = {
+      ...body,
+      keys: { ...body.keys, auth: randomBytes(16).toString("base64url") },
+    };
+    await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: rotated,
+    });
+
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM push_subscriptions WHERE endpoint = $1",
+        [body.endpoint],
+      ),
+    ).toBe(1);
+
+    const { rows } = await app.db.query<{ auth_key: string }>(
+      "SELECT auth_key FROM push_subscriptions WHERE endpoint = $1",
+      [body.endpoint],
+    );
+    expect(rows[0]!.auth_key).toBe(rotated.keys.auth);
+  });
+
+  it("revokes rather than deletes on unsubscribe", async () => {
+    const body = subscription();
+    await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: body,
+    });
+
+    await app.inject({
+      method: "DELETE",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: { endpoint: body.endpoint },
+    });
+
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM push_subscriptions WHERE endpoint = $1 AND revoked_at IS NOT NULL",
+        [body.endpoint],
+      ),
+    ).toBe(1);
+  });
+
+  /**
+   * The endpoint URL is not a secret worth trusting — it travels through a
+   * push service and may be logged along the way. Unsubscribing is scoped to
+   * the caller's own device so that knowing one is not enough to silence
+   * somebody else's notifications.
+   */
+  it("cannot unsubscribe another device's subscription", async () => {
+    const body = subscription();
+    await app.inject({
+      method: "PUT",
+      url: "/api/v1/push/subscription",
+      headers: as(ownerCookie),
+      payload: body,
+    });
+
+    const member = await app.inject({
+      method: "POST",
+      url: "/api/v1/users",
+      headers: as(ownerCookie),
+      payload: {
+        email: "sato@example.test",
+        displayName: "佐藤",
+        role: "member",
+        password: "member-password-here",
+      },
+    });
+    expect(member.statusCode).toBe(201);
+
+    const signedIn = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: {
+        email: "sato@example.test",
+        password: "member-password-here",
+        deviceToken: "phone-01HQ8XN3K7B2WYZ4M6R9TVDGFB",
+      },
+    });
+    const header = String(signedIn.headers["set-cookie"] ?? "");
+    const otherCookie = `${SESSION_COOKIE}=${new RegExp(`${SESSION_COOKIE}=([^;]+)`).exec(header)![1]}`;
+
+    await app.inject({
+      method: "DELETE",
+      url: "/api/v1/push/subscription",
+      headers: as(otherCookie),
+      payload: { endpoint: body.endpoint },
+    });
+
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM push_subscriptions WHERE endpoint = $1 AND revoked_at IS NULL",
+        [body.endpoint],
+      ),
+    ).toBe(1);
+  });
+
+  it("hands the browser a public key it can subscribe with", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/push/public-key",
+      headers: as(ownerCookie),
+    });
+
+    const { publicKey } = response.json() as { publicKey: string | null };
+    expect(publicKey).not.toBeNull();
+    expect(Buffer.from(publicKey!, "base64url").length).toBe(65);
   });
 });

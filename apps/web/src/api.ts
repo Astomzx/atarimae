@@ -192,6 +192,14 @@ export const api = {
     revokeSession: (id: string) => send<void>("DELETE", `/auth/sessions/${id}`),
   },
 
+  push: {
+    publicKey: () => request<{ publicKey: string | null }>("/push/public-key"),
+    subscribe: (input: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+      send<{ subscribed: boolean }>("PUT", "/push/subscription", input),
+    unsubscribe: (endpoint: string) =>
+      send<{ subscribed: boolean }>("DELETE", "/push/subscription", { endpoint }),
+  },
+
   users: {
     list: (params: { orgUnitId?: string; includeDisabled?: boolean } = {}) => {
       const query = new URLSearchParams();

@@ -98,7 +98,13 @@ never appeared. It sits above the router now.
   it is the build's output, and it costs no dependency.
 - **A classic worker, not a module one.** Module service workers are still
   unsupported on Safari, and iOS is where a PWA matters most.
-- **No push notifications.** The tables exist from M2 and nothing is wired up.
+- ~~No push notifications.~~ **Wired up.** The tables M2 left unused are now
+  reached: VAPID keys in `system_settings`, aes128gcm encryption in
+  `apps/server/src/lib/web-push.ts`, and `push` and `notificationclick`
+  handlers in the worker. The payload carries a title, a line of body text and
+  a path — never the announcement, because a notification sits on a lock screen
+  in a break room. Permission is asked for only when somebody presses the
+  button on the device page.
 - **No offline reading of announcements.** It is the feature people ask for
   first and the one that would break the rule at the top of this file. If it is
   ever added, the content has to carry the time it was fetched, on screen,

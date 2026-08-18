@@ -19,6 +19,7 @@ import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
 import { auditRoutes } from "./routes/audit.js";
+import { notificationRoutes } from "./routes/notifications.js";
 import { pushRoutes } from "./routes/push.js";
 import { callRoutes } from "./routes/calls.js";
 import { chatRoutes } from "./routes/chat.js";
@@ -263,6 +264,7 @@ export async function buildApp({
       await api.register(settingsRoutes);
       await api.register(auditRoutes);
       await api.register(pushRoutes);
+      await api.register(notificationRoutes);
       await registerRealtime(api);
     },
     { prefix: "/api/v1" },

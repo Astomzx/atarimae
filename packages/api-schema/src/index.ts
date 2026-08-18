@@ -110,6 +110,13 @@ export {
 } from "./calls.js";
 
 export {
+  ListMyNotificationsQuery,
+  ListMyNotificationsResponse,
+  MyNotification,
+  NotificationEventType,
+} from "./notifications.js";
+
+export {
   PushErrorCode,
   PushPublicKeyResponse,
   PushSubscriptionStatus,

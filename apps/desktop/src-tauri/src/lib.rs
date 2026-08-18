@@ -10,6 +10,8 @@
 //! adds a taskbar entry and a window that is not a browser tab, and
 //! deliberately nothing else.
 
+mod notify;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -365,6 +367,7 @@ pub fn run() {
          * until somebody ticks the box, because an application that puts
          * itself there uninvited is one people uninstall.
          */
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -418,6 +421,19 @@ pub fn run() {
             });
 
             build_tray(app.handle())?;
+
+            /*
+             * Native notifications, polled rather than pushed. WebView2 cannot
+             * receive a Web Push and cannot raise a Notification, so the page
+             * in this window is not able to do it — see notify.rs.
+             *
+             * Only when a server is configured: there is nothing to poll
+             * before somebody has connected.
+             */
+            app.manage(notify::SeenMarker::default());
+            if let Some(server) = stored.server_url.clone() {
+                notify::start(app.handle(), server);
+            }
 
             Ok(())
         })

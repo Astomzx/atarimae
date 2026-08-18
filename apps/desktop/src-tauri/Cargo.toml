@@ -34,6 +34,15 @@ tauri-plugin-single-instance = "2"
 # uninstall.
 tauri-plugin-autostart = "2"
 
+# Native notifications. The reason this client cannot simply use the web app's:
+# WebView2 refuses a Web Push subscription outright and has never implemented
+# the HTML5 Notification API, so the page inside this window cannot raise one.
+tauri-plugin-notification = "2"
+
+# Only for the poll loop's timer. Tauri's async runtime is already tokio, so
+# this adds a feature rather than a runtime.
+tokio = { version = "1", features = ["time"] }
+
 # For the reachability check before an address is saved. Rust does the request
 # rather than the webview because the connect screen is served from
 # `tauri://localhost`, and asking somebody's server from there is a

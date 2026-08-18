@@ -81,6 +81,48 @@ toggle, never from what was clicked: the entry lives somewhere a cleanup tool or
 a group policy can remove it, and a tick claiming a setting the system does not
 have is worse than no tick.
 
+## Notifications, and why they are polled
+
+This is the item that was further away than it looked, and the reason is worth
+keeping: **the obvious plan does not work.** Wiring up the push tables M2 left
+unused gives the _PWA_ notifications. It gives this client none, because
+WebView2 refuses the push subscription outright with an `AbortError` and has
+never implemented the HTML5 Notification API at all ([WebView2Feedback #308],
+[#5051]). The service worker registers; the subscription is the part that
+fails. So a notification here cannot come from the page.
+
+Three ways out, and the third is the one taken.
+
+1. **Grant the remote page IPC access** so it can call a Tauri command.
+   Rejected: the address is whatever the operator typed, so the capability
+   would have to be a wildcard — and then every page this webview ever loads
+   can invoke commands.
+2. **Open a second realtime WebSocket from Rust.** This is what an earlier
+   draft of this document assumed, and it is a second client of a protocol the
+   web application already implements. Two implementations of one protocol
+   drift, and the one nobody looks at drifts first.
+3. **Poll a REST endpoint.** `GET /api/v1/my/notifications`, once a minute.
+
+The cost of polling is latency, and for a board that asks people to confirm a
+shift roster, sixty seconds is not a cost. What it buys is no second protocol
+implementation, no IPC grant to a remote origin, and no dependency beyond the
+notification plugin.
+
+**The session stays in the webview.** Rust reads the cookie for the configured
+origin with `cookies_for_url` and uses it for that one request. This process
+never holds its own credentials, so there is nothing here to leak and nothing
+to keep in step when somebody signs out — no cookie means no notifications,
+which is exactly right.
+
+**`after` takes a notification id, not a timestamp.** Ids are uuidv7 and
+therefore time-ordered, so "everything since this one" needs no clock — and a
+laptop coming out of sleep has a clock the server does not agree with.
+
+**The first poll after launch announces nothing.** It only records where it is.
+Otherwise a week off work becomes twenty notifications in one second, and the
+notification a person actually needed is the one they swipe away with the rest.
+After that, at most three per poll.
+
 ## Where things live
 
 ```
@@ -121,19 +163,6 @@ The commands are on the root package instead:
   a manifest, and this project has neither a release pipeline nor a domain yet.
   Until it does, an updater would be a key to lose — and a private key is the
   one thing that cannot live in the repository that would have to hold it.
-- **No native notifications.** This is the item that is further away than it
-  looks, and the reason is worth writing down because the obvious plan does not
-  work. Wiring up the push tables M2 left unused would give the _PWA_
-  notifications; it would not give this client any, because WebView2 refuses
-  the push subscription outright with an `AbortError`, and has never
-  implemented the HTML5 Notification API at all
-  ([WebView2Feedback #308], [#5051]). The service worker registers; the
-  subscription is the part that fails. So a desktop notification here cannot
-  come from the page. It has to come from Rust holding its own connection and
-  bridging into the webview, which is a second client of the realtime protocol
-  and a second thing to keep in step with the server — the exact cost the rest
-  of this document exists to avoid. It stays undone until it is worth that,
-  and "the PWA gets push" will not by itself make it so.
 - **No code signing.** Windows will show SmartScreen on the installer. Signing
   needs a certificate the project does not have, and saying so is better than
   pretending the warning is a Windows bug.

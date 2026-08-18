@@ -599,3 +599,99 @@ describe("subscribing a device", () => {
     expect(Buffer.from(publicKey!, "base64url").length).toBe(65);
   });
 });
+
+describe("GET /my/notifications", () => {
+  it("is refused without a session", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/v1/my/notifications" });
+    expect(response.statusCode).toBe(401);
+  });
+
+  /** The row the worker writes is the row the desktop client polls for. */
+  it("returns what publishing created, newest first", async () => {
+    const userId = await publishToOneMember();
+    const { mailer } = fakeMailer();
+    await drainOutbox(app.db, mailer, { publicOrigin: "https://atarimae.test" });
+
+    const signedIn = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: {
+        email: "tanaka@example.test",
+        password: "member-password-here",
+        deviceToken: "phone-01HQ8XN3K7B2WYZ4M6R9TVDGFC",
+      },
+    });
+    const header = String(signedIn.headers["set-cookie"] ?? "");
+    const cookie = `${SESSION_COOKIE}=${new RegExp(`${SESSION_COOKIE}=([^;]+)`).exec(header)![1]}`;
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/my/notifications",
+      headers: { cookie },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as {
+      items: { announcementId: string | null; eventType: string }[];
+      unreadCount: number;
+    };
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.unreadCount).toBeGreaterThan(0);
+    expect(body.items[0]!.announcementId).not.toBeNull();
+    expect(userId).toBeTruthy();
+  });
+
+  /** One person's notifications are not another's. */
+  it("never returns somebody else's", async () => {
+    await publishToOneMember();
+    const { mailer } = fakeMailer();
+    await drainOutbox(app.db, mailer, { publicOrigin: "https://atarimae.test" });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/my/notifications",
+      headers: as(ownerCookie),
+    });
+
+    // The Owner published; the obligation belongs to 田中.
+    expect((response.json() as { items: unknown[] }).items).toHaveLength(0);
+  });
+
+  /**
+   * `after` takes an id, not a timestamp. uuidv7 is time-ordered, so a poller
+   * asking "anything since this one" does not need its clock to agree with
+   * the server's — which, on a laptop that has been asleep, it will not.
+   */
+  it("returns nothing newer than the newest it was given", async () => {
+    await publishToOneMember();
+    const { mailer } = fakeMailer();
+    await drainOutbox(app.db, mailer, { publicOrigin: "https://atarimae.test" });
+
+    const signedIn = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: {
+        email: "tanaka@example.test",
+        password: "member-password-here",
+        deviceToken: "phone-01HQ8XN3K7B2WYZ4M6R9TVDGFD",
+      },
+    });
+    const header = String(signedIn.headers["set-cookie"] ?? "");
+    const cookie = `${SESSION_COOKIE}=${new RegExp(`${SESSION_COOKIE}=([^;]+)`).exec(header)![1]}`;
+
+    const first = await app.inject({
+      method: "GET",
+      url: "/api/v1/my/notifications",
+      headers: { cookie },
+    });
+    const newest = (first.json() as { items: { id: string }[] }).items[0]!.id;
+
+    const second = await app.inject({
+      method: "GET",
+      url: `/api/v1/my/notifications?after=${newest}`,
+      headers: { cookie },
+    });
+
+    expect((second.json() as { items: unknown[] }).items).toHaveLength(0);
+  });
+});

@@ -168,14 +168,14 @@ rather than only by another Owner.
 
 ## Summary
 
-|                                     | Recommendation                           |
-| ----------------------------------- | ---------------------------------------- |
-| 1. Offline reading of announcements | **Do it**, with an unmissable fetch time |
-| 2. Account lockout                  | Keep; notify instead of locking          |
-| 3. Backup over HTTP                 | Keep; extend CSV export instead          |
-| 4. Encrypting the archive           | **Do it**, encrypt-to-your-own-key only  |
-| 5. Embedding the call room          | Keep                                     |
-| 6. Hostile administrator            | Keep; show people their own audit trail  |
+|                                     | Recommendation                                       |
+| ----------------------------------- | ---------------------------------------------------- |
+| 1. Offline reading of announcements | **Done** (M6a) — unmissable fetch time, E2E-enforced |
+| 2. Account lockout                  | Keep; notify instead of locking                      |
+| 3. Backup over HTTP                 | Keep; extend CSV export instead                      |
+| 4. Encrypting the archive           | **Do it**, encrypt-to-your-own-key only              |
+| 5. Embedding the call room          | Keep                                                 |
+| 6. Hostile administrator            | Keep; show people their own audit trail              |
 
 Two to build, four to leave — and three of the four have a smaller, honest
 alternative worth doing instead.

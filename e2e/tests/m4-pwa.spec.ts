@@ -156,11 +156,24 @@ test.describe("M4: installable, and honest offline", () => {
       await expect(page.getByTestId("offline-bar")).toContainText("最新ではない可能性");
 
       /*
-       * The announcement must NOT come back from a cache. The service worker
-       * never stores an API response, so this list is empty or errored — it
-       * does not quietly show yesterday's plan as though it were today's.
+       * This assertion was the opposite until M6a, and the reversal was an
+       * explicit decision — see `docs/architecture/reconsidering.md`. A driver
+       * in a basement saw nothing at all, and yesterday's roster clearly
+       * stamped with when it was fetched is better than nothing.
+       *
+       * "Clearly stamped" is the condition the whole exception rests on, so it
+       * is asserted here rather than assumed: the announcement comes back AND
+       * the page says when it was taken. If the label ever disappears, this
+       * fails — which is the point.
        */
-      await expect(page.getByTestId("announcement-title")).toHaveCount(0);
+      await expect(page.getByTestId("announcement-title")).toHaveText(TITLE);
+
+      const snapshot = page.getByTestId("offline-snapshot");
+      await expect(snapshot).toBeVisible();
+      await expect(snapshot).toContainText("に取得した内容");
+      await expect(snapshot).toContainText("最新ではない可能性");
+      // A real time, not an empty placeholder.
+      await expect(snapshot).toContainText(/\d{1,2}:\d{2}/);
     } finally {
       await context.setOffline(false);
     }
@@ -227,7 +240,17 @@ test.describe("M4: installable, and honest offline", () => {
    * Attachments and message bodies live under /api, so nothing private is
    * written to a cache that outlives the session.
    */
-  test("7. nothing from the API is in the cache", async ({ page }) => {
+  /**
+   * The exception is exactly one path wide.
+   *
+   * Attachments live under `/api` too. A whitelist that grew — or a
+   * `startsWith` where a regular expression was meant — would write somebody's
+   * uploaded files into a cache that outlives their session, on a machine they
+   * may share. This is the test that would notice.
+   */
+  test("7. only announcements are cached, never anything else under /api", async ({
+    page,
+  }) => {
     await signIn(page);
     await waitForServiceWorker(page);
     await page.goto("/my/announcements");
@@ -240,9 +263,66 @@ test.describe("M4: installable, and honest offline", () => {
         const cache = await caches.open(name);
         for (const request of await cache.keys()) urls.push(request.url);
       }
-      return urls.filter((url) => new URL(url).pathname.startsWith("/api/"));
+      return urls
+        .map((url) => new URL(url).pathname)
+        .filter((path) => path.startsWith("/api/"));
     });
 
-    expect(cachedApi).toEqual([]);
+    /*
+     * Kept in step with the worker's own list by hand, and deliberately
+     * written out rather than imported: this is the assertion that would
+     * notice the list growing, so it must not grow with it.
+     */
+    const allowed = [
+      /^\/api\/v1\/my\/announcements(\/[0-9a-fA-F-]{36})?$/,
+      /^\/api\/v1\/auth\/me$/,
+      /^\/api\/v1\/setup\/status$/,
+    ];
+    expect(
+      cachedApi.filter((path) => !allowed.some((pattern) => pattern.test(path))),
+    ).toEqual([]);
+  });
+
+  /**
+   * Signing out on a shared office PC must leave nothing readable behind.
+   *
+   * The cached announcements belong to the session, not the build — so they go
+   * when the session does, and the next person cannot pull the previous one's
+   * roster out of the cache by pulling the network cable.
+   */
+  test("8. signing out empties the offline copy", async ({ page }) => {
+    await signIn(page);
+    await waitForServiceWorker(page);
+    await page.goto("/my/announcements");
+    await expect(page.getByTestId("announcement-card")).toBeVisible();
+
+    const before = await page.evaluate(async () => {
+      const cache = await caches.open("atarimae-reads-v1");
+      return (await cache.keys()).length;
+    });
+    expect(before).toBeGreaterThan(0);
+
+    await page.getByTestId("logout").click();
+    await expect(page).toHaveURL(/\/login/);
+
+    /*
+     * Not "the cache is empty". Signing out reloads the page, which asks
+     * `/setup/status` again — public, identical for everybody, and cached
+     * again immediately. The property that matters is narrower and is the one
+     * asserted: nothing belonging to the person who just left is still there.
+     */
+    await expect
+      .poll(async () =>
+        page.evaluate(async () => {
+          if (!(await caches.has("atarimae-reads-v1"))) return [];
+          const cache = await caches.open("atarimae-reads-v1");
+          return (await cache.keys())
+            .map((request) => new URL(request.url).pathname)
+            .filter(
+              (path) => path.includes("/my/announcements") || path.includes("/auth/me"),
+            );
+        }),
+      )
+      .toEqual([]);
   });
 });

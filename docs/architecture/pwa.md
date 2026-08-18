@@ -105,10 +105,13 @@ never appeared. It sits above the router now.
   a path — never the announcement, because a notification sits on a lock screen
   in a break room. Permission is asked for only when somebody presses the
   button on the device page.
-- **No offline reading of announcements.** It is the feature people ask for
-  first and the one that would break the rule at the top of this file. If it is
-  ever added, the content has to carry the time it was fetched, on screen,
-  every time.
+- ~~No offline reading of announcements.~~ **Reversed in M6a**, deliberately
+  and with the condition this file set attached — see
+  `docs/architecture/reconsidering.md`. A driver in a basement saw nothing at
+  all; yesterday's roster, clearly stamped with when it was fetched, beats
+  that. The stamp is the whole of the argument, so it is unmissable and an E2E
+  test fails without it. Reading only: acknowledging offline still fails, and
+  still has its own test.
 
 ## Testing it
 

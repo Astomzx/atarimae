@@ -79,6 +79,37 @@ export function contentDispositionFilename(name: string): string {
   return `filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
 
+/**
+ * Set by the service worker on anything it served from its own cache, and read
+ * here so the interface can say how old the content is.
+ *
+ * `docs/architecture/pwa.md` makes that display the *condition* of caching
+ * announcements at all: cached content must carry the time it was fetched, on
+ * screen, every time.
+ */
+const FETCHED_AT = "x-atarimae-fetched-at";
+
+/**
+ * When each path was last answered from the cache rather than the network.
+ *
+ * A map rather than a field on the response, because the callers return parsed
+ * JSON and threading a second value through every one of them would put the
+ * stamp in reach of far more code than needs it. Cleared on a live answer, so
+ * a stale entry cannot outlive the staleness it describes.
+ */
+const lastFetchedAt = new Map<string, string>();
+
+/** When `path` was fetched, if the last answer for it came from the cache. */
+export function cachedAt(path: string): string | null {
+  return lastFetchedAt.get(path) ?? null;
+}
+
+/** Empties the offline copy of one person's announcements. */
+export function forgetCachedReads(): void {
+  lastFetchedAt.clear();
+  navigator.serviceWorker?.controller?.postMessage({ type: "FORGET_READS" });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
@@ -117,8 +148,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  // Anything with a status came from the server, including its errors.
-  pwa.reportReachable(true);
+  /*
+   * A cached answer has a status too, so "it resolved" is not evidence the
+   * server was reached. The service worker stamps anything it served from its
+   * own cache, and without this check reading yesterday's roster would clear
+   * the offline banner — the interface would stop saying the one thing it
+   * exists to say.
+   */
+  const fetchedAt = response.headers.get(FETCHED_AT);
+  if (fetchedAt) {
+    pwa.reportReachable(false);
+    lastFetchedAt.set(path, fetchedAt);
+  } else {
+    pwa.reportReachable(true);
+    lastFetchedAt.delete(path);
+  }
 
   if (!response.ok) {
     let body: ErrorResponse | undefined;
@@ -187,7 +231,19 @@ export const api = {
         deviceToken: deviceToken(),
         deviceName: deviceName(),
       }),
-    logout: () => send<void>("POST", "/auth/logout"),
+    /*
+     * The cached announcements go with the session. Cleared even if the
+     * request fails: signing out on a shared office PC has to leave nothing
+     * readable behind, and "the server did not answer" is not a reason to
+     * leave one person's roster on somebody else's screen.
+     */
+    logout: async () => {
+      try {
+        await send<void>("POST", "/auth/logout");
+      } finally {
+        forgetCachedReads();
+      }
+    },
     sessions: () => request<{ items: SessionSummary[] }>("/auth/sessions"),
     revokeSession: (id: string) => send<void>("DELETE", `/auth/sessions/${id}`),
   },

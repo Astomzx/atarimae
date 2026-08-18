@@ -1,7 +1,25 @@
 import type { MyAnnouncement } from "@atarimae/api-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, errorMessage } from "../api.js";
+import { api, cachedAt, errorMessage } from "../api.js";
+
+/**
+ * The fetch time, in words somebody can act on.
+ *
+ * An ISO string is not a time to a reader in a truck. Today shows a clock,
+ * anything older shows a date as well — because "16:32" on a roster fetched
+ * three days ago is exactly the misreading this label exists to prevent.
+ */
+function formatFetchedAt(iso: string): string {
+  const fetched = new Date(iso);
+  const sameDay = new Date().toDateString() === fetched.toDateString();
+
+  return fetched.toLocaleString("ja-JP", {
+    ...(sameDay ? {} : { month: "numeric", day: "numeric" }),
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 /**
  * What a recipient actually sees: the shared body, and — if there is one — the
@@ -24,6 +42,14 @@ export function MyAnnouncementsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-announcements"] }),
   });
 
+  /*
+   * The condition `docs/architecture/pwa.md` set for caching announcements at
+   * all: cached content carries the time it was fetched, on screen, every
+   * time. Read after the query settles, so it describes the answer being
+   * rendered rather than the previous one.
+   */
+  const fetchedAt = announcements.isSuccess ? cachedAt("/my/announcements") : null;
+
   const items = announcements.data?.items ?? [];
   const pending = items.filter((a) => a.requiresAcknowledgement && !a.acknowledgedAt);
   const rest = items.filter((a) => !pending.includes(a));
@@ -31,6 +57,20 @@ export function MyAnnouncementsPage() {
   return (
     <div className="page">
       <h1 className="page__title">お知らせ</h1>
+
+      {/*
+        Not a badge and not a tooltip. Somebody reading a roster in a basement
+        has to be told, without looking for it, that this is not live — the
+        whole argument for showing it at all is that "yesterday's, clearly
+        labelled" beats "nothing", and it only beats nothing while the label
+        is impossible to miss.
+      */}
+      {fetchedAt && (
+        <p className="alert alert--warning" data-testid="offline-snapshot">
+          オフラインです。{formatFetchedAt(fetchedAt)}
+          に取得した内容を表示しています。最新ではない可能性があります。
+        </p>
+      )}
 
       {announcements.isPending && <p className="muted">読み込み中…</p>}
 

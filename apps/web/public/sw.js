@@ -29,6 +29,19 @@
 const CACHE = "atarimae-shell-v1";
 
 /**
+ * Announcements read while online, kept so they can be read again offline.
+ *
+ * Separate from the shell cache because its lifetime is different: the shell
+ * belongs to the build, this belongs to the *session*. It holds one person's
+ * announcements, and the next person to use a shared PC in the office must not
+ * be able to read them — so signing out empties it.
+ */
+const READS = "atarimae-reads-v1";
+
+/** Stamped onto a cached copy so the interface can say how old it is. */
+const FETCHED_AT = "x-atarimae-fetched-at";
+
+/**
  * Fetched on install so a first-run offline visit still has something.
  * The hashed assets are not listed: their names change every build, and they
  * are picked up on first use by the immutable rule below.
@@ -82,6 +95,15 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     void self.skipWaiting();
   }
+
+  /*
+   * Sent on sign-out. Without it, the announcements one person read stay
+   * readable offline by whoever uses that machine next — which in an office
+   * with one shared PC is not a hypothetical.
+   */
+  if (event.data && event.data.type === "FORGET_READS") {
+    event.waitUntil(caches.delete(READS));
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -89,7 +111,9 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const names = await caches.keys();
       await Promise.all(
-        names.filter((name) => name !== CACHE).map((name) => caches.delete(name)),
+        names
+          .filter((name) => name !== CACHE && name !== READS)
+          .map((name) => caches.delete(name)),
       );
       await self.clients.claim();
     })(),
@@ -120,6 +144,85 @@ function isApi(url) {
   return url.pathname.startsWith("/api/");
 }
 
+/**
+ * The one API path that may be read offline.
+ *
+ * Deliberately a whitelist of exactly two shapes — the list and one
+ * announcement — and deliberately a regular expression rather than a
+ * `startsWith`. Attachments live under `/api` too, and a prefix match that
+ * grew to include them would write somebody's uploaded files into a cache that
+ * outlives their session.
+ *
+ * `docs/architecture/pwa.md` set the condition for this exception: cached
+ * content must carry the time it was fetched, on screen, every time. That is
+ * what FETCHED_AT is for, and there is an E2E test that fails if the line is
+ * missing.
+ */
+const OFFLINE_READABLE = [
+  /*
+   * The announcements themselves: the list, and one by id.
+   */
+  /^\/api\/v1\/my\/announcements(\/[0-9a-fA-F-]{36})?$/,
+
+  /*
+   * And the two the application cannot start without.
+   *
+   * Without these the root falls back to "サーバーに接続できません" before it
+   * ever renders an announcement, and every byte cached above is unreachable —
+   * which is precisely what the first attempt at this did. Caching the
+   * roster but not the question "is anybody signed in" is caching nothing.
+   *
+   * Both are session-scoped and go when the session does. The honest limit:
+   * offline, a session revoked by an administrator still looks valid here.
+   * Nothing can be *done* with it — acknowledging offline fails, and has its
+   * own test — but yesterday's roster stays readable until the network comes
+   * back. That is the trade this whole exception is.
+   */
+  /^\/api\/v1\/auth\/me$/,
+  /^\/api\/v1\/setup\/status$/,
+];
+
+function isOfflineReadable(url) {
+  return OFFLINE_READABLE.some((pattern) => pattern.test(url.pathname));
+}
+
+/**
+ * Network first, and remember the answer with the time it arrived.
+ *
+ * Never cache first. A roster that changed this morning must not be served
+ * from yesterday because the cache was quicker — the cache is a fallback for
+ * having no network, not a performance trick.
+ */
+async function readThrough(request) {
+  try {
+    const response = await fetch(request);
+
+    if (response.ok) {
+      /*
+       * Stored with the timestamp baked into the headers rather than kept in
+       * a side table. A cache entry and a separate record of when it was
+       * written are two things that can disagree, and the one that would be
+       * wrong is the one shown to somebody deciding whether to trust it.
+       */
+      const stamped = new Response(response.clone().body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers),
+      });
+      stamped.headers.set(FETCHED_AT, new Date().toISOString());
+
+      const cache = await caches.open(READS);
+      await cache.put(request, stamped);
+    }
+
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request, { ...MATCH, cacheName: READS });
+    if (cached) return cached;
+    throw error;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
 
@@ -137,8 +240,18 @@ self.addEventListener("fetch", (event) => {
    *
    * Attachments live under /api too, so private files are never written to a
    * cache that outlives the session either.
+   *
+   * One exception, added in M6a after an explicit decision recorded in
+   * `docs/architecture/reconsidering.md`: announcements may be read offline,
+   * because a driver in a basement currently sees nothing at all and
+   * yesterday's roster clearly stamped with when it was fetched is better than
+   * that. Only reading — acknowledging offline still fails, and still has a
+   * test saying so.
    */
-  if (isApi(url)) return;
+  if (isApi(url)) {
+    if (isOfflineReadable(url)) event.respondWith(readThrough(request));
+    return;
+  }
 
   /*
    * Navigation: network first, cache as a fallback.

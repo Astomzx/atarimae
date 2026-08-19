@@ -169,15 +169,17 @@ The recipient goes on the command line and the identity does not — a public ke
 is not a secret, so a process list seeing it costs nothing, while a private key
 is passed as a path and never as its contents.
 
-**What has not been verified.** `age` is not installed on the machine this was
-written on, so the real binary has never been run against it. Sixteen tests
-cover the command that would be handed to it and every way it can fail —
-missing, exiting non-zero, or claiming success while producing zero bytes,
-which would otherwise write an empty file with a reassuring name. The CLI's own
-handling of an `.age` file was exercised for real: a missing `--identity` is
-named, and a redundant one is pointed out rather than ignored. What remains
-unproven is that real `age` accepts these arguments, and that is one
-`age --version` away from being settled.
+**Verified against real age**, v1.3.1, not only against a stub. A keypair from
+`age-keygen`, a backup encrypted to it, the file confirmed to begin
+`age-encryption.org/v1`, `verify` decrypting it, and a full restore into an
+empty database matching every row count and all three attachments. Both
+refusals were exercised too: the wrong identity reports age's own "no identity
+matched any of the recipients", and no identity at all names what is missing
+rather than failing inside gunzip.
+
+Sixteen unit tests cover the rest by injecting `spawnSync` — the command handed
+to age, and every way it can fail, including exiting zero with zero bytes,
+which would otherwise write an empty file with a reassuring name.
 
 ## Deliberately not done
 

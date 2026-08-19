@@ -181,6 +181,44 @@ Sixteen unit tests cover the rest by injecting `spawnSync` — the command hande
 to age, and every way it can fail, including exiting zero with zero bytes,
 which would otherwise write an empty file with a reassuring name.
 
+## Downloading one over HTTP
+
+```
+POST /api/v1/backup/export   { "password": "…" }
+```
+
+This file refused this once, and the refusal was right about what it was
+worried about: **one request that carries away every password hash, every
+message and every attachment.** Shell access to the host was the barrier, and
+this removes it.
+
+It exists because the barrier was also doing something else. An operator who
+cannot open a terminal was, in practice, an operator with no backups — and a
+backup feature nobody can use is the same as not having one. That cost was
+real, and it was the one being paid.
+
+So it is built, and made as narrow as the threat allows:
+
+- **Owner only.** Not admin. Owner is already the role that can grant Owner, so
+  no new capability reaches anybody who did not have everything already.
+- **People only.** An API token is refused before the handler runs. A leaked
+  integration token must not become the whole database.
+- **The password, again, now.** The important one. A stolen session cookie is
+  the realistic attack, and this makes the cookie alone insufficient.
+- **Audited, including refusals.** Somebody holding an Owner session but not
+  the password is somebody who took that session, and that row is the more
+  interesting of the two.
+- **Five per hour.** Argon2 on every attempt and a full dump on every success.
+- **Refuses an inconsistent system outright.** No `--allow-missing-attachments`
+  here. The command line can ask a person; a request has nobody to ask, and an
+  archive pulled through a browser is one nobody inspects before trusting it.
+
+**What none of that fixes**, stated plainly rather than buried under the list:
+an Owner who is hostile, or an Owner whose password is taken along with their
+session. Against those this endpoint is exactly as dangerous as it first looks.
+An operator who does not want it should not expose the application to the
+internet without a proxy that requires something more.
+
 ## Deliberately not done
 
 - **No scheduling.** `cron` exists and is better at it. The tool's job is to
@@ -192,9 +230,9 @@ which would otherwise write an empty file with a reassuring name.
 - ~~No encryption of the archive itself.~~ **Optional, via `age`.** The
   original objection stands for the obvious version and is why this is the
   narrow one: Atarimae never generates, stores or sees a key. See below.
-- **No backup over HTTP.** There is no admin button for this. A full dump
-  streamed through the application is an endpoint that returns the entire
-  database, and no permission check is worth that much.
+- ~~No backup over HTTP.~~ **Built, and made as narrow as the threat allows.**
+  See below — the original objection is not withdrawn, it is mitigated and then
+  stated again.
 - **No automatic restore verification.** `backup:verify` proves an archive is
   internally complete; it cannot prove the dump's contents are meaningful. For
   that, restore onto a spare machine. A backup you have never restored is not a

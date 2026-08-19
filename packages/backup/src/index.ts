@@ -1,4 +1,11 @@
 export {
+  buildArchive,
+  type ArchiveInput,
+  type BuiltArchive,
+  type StoredFile,
+} from "./archive.js";
+
+export {
   ATTACHMENT_PREFIX,
   BackupFormatError,
   DATABASE_NAME,

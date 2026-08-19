@@ -695,3 +695,122 @@ describe("GET /my/notifications", () => {
     expect((second.json() as { items: unknown[] }).items).toHaveLength(0);
   });
 });
+
+describe("POST /backup/export", () => {
+  it("is refused without a session", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      payload: { password: OWNER.password },
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  /**
+   * Not admin. The Owner role is the one that can already grant Owner; this
+   * hands no new capability to anybody else.
+   */
+  it("is refused to an administrator", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/users",
+      headers: as(ownerCookie),
+      payload: {
+        email: "admin@example.test",
+        displayName: "管理者",
+        role: "admin",
+        password: "admin-password-here",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+
+    const signedIn = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: {
+        email: "admin@example.test",
+        password: "admin-password-here",
+        deviceToken: "pc-01HQ8XN3K7B2WYZ4M6R9TVDGFE",
+      },
+    });
+    const header = String(signedIn.headers["set-cookie"] ?? "");
+    const adminCookie = `${SESSION_COOKIE}=${new RegExp(`${SESSION_COOKIE}=([^;]+)`).exec(header)![1]}`;
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      headers: { cookie: adminCookie },
+      payload: { password: "admin-password-here" },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  /**
+   * The mitigation that matters. A stolen session cookie is the realistic
+   * attack against an endpoint that returns the whole database, and this is
+   * what makes the cookie alone insufficient.
+   */
+  it("refuses an Owner session without the password", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      headers: as(ownerCookie),
+      payload: { password: "not-the-password" },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  /** Somebody with the session but not the password took that session. */
+  it("records the refusal in the audit log", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      headers: as(ownerCookie),
+      payload: { password: "not-the-password" },
+    });
+
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM audit_logs WHERE action = 'backup.export_refused'",
+      ),
+    ).toBe(1);
+  });
+
+  it("returns a gzipped archive to an Owner with the password", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      headers: as(ownerCookie),
+      payload: { password: OWNER.password },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/gzip");
+    expect(String(response.headers["content-disposition"])).toContain(".tar.gz");
+    // Never stored anywhere but this response.
+    expect(response.headers["cache-control"]).toBe("no-store");
+
+    // gzip magic, so this is an archive rather than an error page.
+    const body = response.rawPayload;
+    expect(body[0]).toBe(0x1f);
+    expect(body[1]).toBe(0x8b);
+    expect(body.length).toBeGreaterThan(1000);
+  });
+
+  it("records the export itself", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/backup/export",
+      headers: as(ownerCookie),
+      payload: { password: OWNER.password },
+    });
+
+    expect(
+      await countOf(
+        "SELECT count(*)::text AS count FROM audit_logs WHERE action = 'backup.exported'",
+      ),
+    ).toBe(1);
+  });
+});

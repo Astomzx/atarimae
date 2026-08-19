@@ -124,6 +124,12 @@ follows a call link.
 
 ## Backups
 
+**`POST /backup/export` returns the entire database in one request.** Owner only,
+an API token cannot call it, the password must be given again, every attempt is
+audited and it is limited to five an hour. None of that helps against an Owner
+who is hostile or whose password was taken with their session — see
+`docs/architecture/backup.md`.
+
 The archive contains password hashes and every message. The encryption key is
 deliberately _not_ in it. See `docs/architecture/backup.md`.
 

@@ -13,6 +13,16 @@ import type { Database, DatabaseClient } from "../db.js";
 export const AuditAction = {
   SETUP_OWNER_CREATED: "setup.owner_created",
 
+  /**
+   * One request that carries away every password hash, message and attachment.
+   *
+   * Recorded on the attempt as well as the success, and the refused attempt is
+   * the more interesting row: somebody who has an Owner session but not the
+   * password is somebody who took the session rather than being given it.
+   */
+  BACKUP_EXPORTED: "backup.exported",
+  BACKUP_EXPORT_REFUSED: "backup.export_refused",
+
   LOGIN_SUCCEEDED: "auth.login_succeeded",
   LOGIN_FAILED: "auth.login_failed",
   LOGOUT: "auth.logout",

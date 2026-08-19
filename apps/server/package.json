@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@atarimae/api-schema": "workspace:*",
+    "@atarimae/backup": "workspace:*",
     "@atarimae/secret-store": "workspace:*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^10.0.0",

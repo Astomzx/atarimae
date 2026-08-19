@@ -54,6 +54,9 @@ importers:
       '@atarimae/api-schema':
         specifier: workspace:*
         version: link:../../packages/api-schema
+      '@atarimae/backup':
+        specifier: workspace:*
+        version: link:../../packages/backup
       '@atarimae/secret-store':
         specifier: workspace:*
         version: link:../../packages/secret-store

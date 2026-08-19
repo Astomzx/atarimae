@@ -109,6 +109,8 @@ export {
   ListCallsResponse,
 } from "./calls.js";
 
+export { BackupErrorCode, ExportBackupRequest } from "./backup.js";
+
 export {
   ListMyNotificationsQuery,
   ListMyNotificationsResponse,

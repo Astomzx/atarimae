@@ -19,6 +19,8 @@
 
 import type { FastifyInstance } from "fastify";
 
+import { DEFAULT_PROVIDER_ORDER } from "../services/call-providers.js";
+
 /**
  * One policy for every response.
  *
@@ -93,6 +95,19 @@ export interface SecurityHeaderOptions {
 }
 
 /**
+ * What a CSP host-source can express: letters, digits, dots and hyphens.
+ *
+ * Stricter than what a URL parser will accept, and the gap is not theoretical.
+ * `{` and `}` are not forbidden host code points, so
+ * `https://{room}.meet.example.test/` parses happily and yields an "origin"
+ * with braces in it — which as a CSP source matches nothing, in a header no
+ * browser will complain about. An IPv6 literal is refused for the same reason:
+ * `host-source` has no way to write one, so it could only be a directive that
+ * quietly never matches.
+ */
+const CSP_HOST = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
+
+/**
  * Scheme and host of a provider URL, or null if it is not a usable origin.
  *
  * Only the origin ever reaches a header. A CSP source carrying a path is
@@ -105,6 +120,7 @@ export function frameOriginOf(url: string | null | undefined): string | null {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    if (!CSP_HOST.test(parsed.hostname)) return null;
     return parsed.origin;
   } catch {
     return null;
@@ -225,7 +241,17 @@ export function registerSecurityHeaders(app: FastifyInstance): void {
     production: app.config.NODE_ENV === "production",
   });
 
+  /*
+   * Readable as well as writable, because the join route has to answer "may
+   * the client frame this?" and the only honest answer is the one the browser
+   * will act on — which is this value, not the flag in the database.
+   */
+  let current: string | null = null;
+
+  app.decorate("callFrameOrigin", { getter: () => current });
+
   app.decorate("refreshSecurityHeaders", (callFrameOrigin: string | null) => {
+    current = callFrameOrigin;
     headers = securityHeadersFor({
       production: app.config.NODE_ENV === "production",
       callFrameOrigin: callFrameOrigin ?? undefined,
@@ -246,20 +272,52 @@ export function registerSecurityHeaders(app: FastifyInstance): void {
  * Reads the embeddable provider's origin, if there is one, and applies it.
  *
  * Called at startup and after a provider is written. Missing the refresh is a
- * frame that silently fails to load, so both call sites matter — but a failure
- * here must never stop the server starting: no origin means no embedding,
- * which is the safe direction.
+ * frame that silently fails to load — or worse in the other direction, an
+ * origin left in `frame-src` after the provider it belonged to was stopped —
+ * so every call site matters. A failure here must never stop the server
+ * starting: no origin means no embedding, which is the safe direction.
+ *
+ * The provider is chosen exactly as a call chooses one, and its `embeddable`
+ * is read afterwards rather than being part of the WHERE clause. Filtering on
+ * it instead would name the origin of an embeddable provider that calls do not
+ * use, whenever an organisation has both kinds configured.
  */
 export async function refreshCallFrameOrigin(app: FastifyInstance): Promise<void> {
   try {
-    const { rows } = await app.db.query<{ url_template: string | null }>(
-      `SELECT url_template FROM call_providers
-        WHERE embeddable AND disabled_at IS NULL AND is_default
+    const { rows } = await app.db.query<{
+      url_template: string | null;
+      embeddable: boolean;
+    }>(
+      `SELECT url_template, embeddable FROM call_providers
+        WHERE disabled_at IS NULL
+        ${DEFAULT_PROVIDER_ORDER}
         LIMIT 1`,
     );
-    app.refreshSecurityHeaders(frameOriginOf(rows[0]?.url_template));
+
+    const provider = rows[0];
+    app.refreshSecurityHeaders(
+      provider?.embeddable ? frameOriginOf(provider.url_template) : null,
+    );
   } catch (error) {
     app.log.error({ err: error }, "could not read the call provider origin");
     app.refreshSecurityHeaders(null);
   }
+}
+
+/**
+ * Whether a browser here would accept this URL in a frame.
+ *
+ * Compared against the origin currently in `frame-src` rather than read from
+ * the provider row, because the two can differ and only one of them is what
+ * the browser enforces: a call carries the join URL it was created with, and
+ * the provider may have been changed or stopped since. Telling the client to
+ * frame a URL the CSP refuses produces an empty panel and no explanation.
+ */
+export function mayBeFramed(
+  /** Structural on purpose: the typed instance inside a route is not the plain one. */
+  app: { readonly callFrameOrigin: string | null },
+  joinUrl: string,
+): boolean {
+  const allowed = app.callFrameOrigin;
+  return allowed !== null && frameOriginOf(joinUrl) === allowed;
 }

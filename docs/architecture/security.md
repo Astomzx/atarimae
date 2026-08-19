@@ -33,6 +33,24 @@ There is no constraint in a database that can catch this. It has to be stopped
 in the browser, which is why the header is not optional and why it is asserted
 by a test rather than left to a plugin's defaults.
 
+### The two directions are not the same directive
+
+`frame-ancestors` is who may put this application in a frame. `frame-src` is
+what this application may put in one. Only the first has anything to do with the
+attack above, and conflating them is what made embedding a call room look
+unaffordable when it was not.
+
+An embeddable call provider moves `frame-src` to name exactly one origin and
+moves `frame-ancestors` not at all. There is a test for that specifically,
+because the two directives read alike and the wrong one moving would be a change
+nobody notices until 確認 means less than it says.
+
+`script-src 'self'` does not move either: a room in an iframe needs no vendor
+JavaScript on this origin, and a cross-origin frame cannot read the page it sits
+in. What does move alongside `frame-src` is `Permissions-Policy`, which grants
+camera and microphone **to that origin and never to this one** — without it the
+frame loads and cannot hear anybody.
+
 ## The rest of the headers
 
 Set by `apps/server/src/plugins/security-headers.ts` on every response, from an
@@ -48,7 +66,7 @@ exactly where somebody is probing.
 | `referrer-policy: no-referrer`    | Internal uuids leaving the building in a `Referer`                        |
 | `cross-origin-opener-policy`      | Another origin holding a handle on this window                            |
 | `cross-origin-resource-policy`    | Another origin loading an attachment as an image or a script              |
-| `permissions-policy`              | Camera, microphone, location — none of which this application asks for    |
+| `permissions-policy`              | Camera, microphone, location — none of which this origin ever asks for    |
 | `strict-transport-security`       | Production only, where TLS is a documented requirement                    |
 
 The CSP allows no inline script, no `eval` and no inline style. That is

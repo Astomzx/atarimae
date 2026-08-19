@@ -1015,6 +1015,39 @@ body {
   font-size: 0.9rem;
 }
 
+/*
+ * The provider's room, in the conversation.
+ *
+ * An aspect ratio rather than a fixed height, so the same rule works at both
+ * widths — a meeting room 200px tall on a phone is a video call nobody can see.
+ * `min-height` stops it collapsing to nothing in a short viewport.
+ */
+.call-room {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.call-room__frame {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: 15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-sunken, var(--surface));
+}
+
+.call-room__note {
+  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.call-room__out {
+  margin-left: auto;
+}
+
 /* ------------------------------------------------------------------ pwa -- */
 
 /*

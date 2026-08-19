@@ -94,6 +94,73 @@ cloud — the arrangement this project exists to argue with.
 What is left to lean on: administrator-only configuration, and the provider's
 response is never returned to the caller, only the join URL extracted from it.
 
+## Where the room appears
+
+Its own window by default. Inside Atarimae if an administrator ticks
+`embeddable` on a `url` provider — and the objection that used to sit here,
+"embedding it would mean a vendor's SDK on every page", turned out to be an
+objection to something nobody had to build.
+
+**A frame is not an SDK.** An iframe pointed at a room URL runs no third-party
+JavaScript on this origin, and a cross-origin frame cannot read the page it sits
+in. `script-src 'self'` does not move to allow it. Swapping providers is still a
+settings change, because there is still nothing of the vendor's in this
+codebase.
+
+What does move is narrow: `frame-src` gains exactly one origin, and
+`Permissions-Policy` grants camera and microphone to that origin and never to
+this one. `frame-ancestors 'none'` — the clickjacking defence around 確認 — does
+not move at all, which is the whole reason this was affordable. See
+`security.md`.
+
+### Why it has to be asked for
+
+Off by default, and detection is not on offer: **a page cannot tell whether a
+cross-origin frame loaded or was refused by the provider's own
+`X-Frame-Options`.** The load event fires either way and nothing inside is
+readable. So "try it and fall back" does not exist, an administrator who knows
+their provider has to say so, and the interface always offers 別の窓で開く
+underneath the frame — because an empty rectangle is a possible outcome that
+nothing can report.
+
+The one framing failure a browser _does_ report is its own: a CSP refusal fires
+`securitypolicyviolation`, and the client uses it to fall back to a link. That
+matters because the policy travels with the document — a page loaded before the
+setting was changed is still enforcing the old one, and the interface says so on
+the form.
+
+### `url` only, and that is the browser's rule
+
+An `http` provider cannot be embedded and the request is refused with
+`CALL_PROVIDER_NOT_EMBEDDABLE` rather than stored. The origin has to be in a
+response header before the page that will hold the frame is served, and an HTTP
+provider's join URL does not exist until a call asks for it. A template whose
+_host_ is a placeholder (`https://{room}.example.com/`) is refused for the same
+reason.
+
+### What the client is told, and when
+
+Two questions, deliberately separate:
+
+| Question                      | Answered by           | Why not the other one                                                                |
+| ----------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| Are calls framed here at all? | `GET /call-embedding` | A popup blocker only allows `window.open` during the gesture that asked for one      |
+| May _this_ room be framed?    | `embed` on join       | The provider can change mid-call; the answer has to be about the header now in force |
+
+`embed` is computed by comparing the call's join URL against the origin
+currently in `frame-src`, not by reading the provider's flag. A call outlives the
+provider it was started with, and telling the client to frame something the
+browser will refuse is an empty panel with no explanation.
+
+### The costs, stated
+
+- **The framed room closes when you leave the conversation.** A window did not.
+  Rejoining works and is one press, but this is a real difference and it is why
+  embedding is opt-in rather than the default.
+- The origin reaches the header when a provider is written **through the API**.
+  A database changed underneath a running server — a restore — needs a restart
+  before the header agrees with it.
+
 ## The room name
 
 Generated (`atarimae-<uuid>`), never derived from the channel or anything a
@@ -150,11 +217,10 @@ count as unread — for a line of text.
 
 ## Limits
 
-- The room opens in its own window. Embedding it would mean a vendor's SDK on
-  every page, which is precisely the lock-in a configurable provider exists to
-  avoid.
 - One provider is used, the default. Per-channel providers are not a thing
-  anybody has asked for.
+  anybody has asked for. The provider a call is held with and the origin in
+  `frame-src` are chosen by the same rule, in one place, because two spellings
+  of "the default one" would disagree the moment an organisation has two.
 - No per-participant tokens: one room URL is issued per call and shared by
   everybody who joins. A provider that issues a token per person would need
   the provider asked once per join, which is a change to `resolveJoinUrl` and

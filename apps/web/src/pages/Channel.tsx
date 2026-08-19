@@ -29,7 +29,8 @@ import {
   type MentionCandidate,
   type MessagePages,
 } from "../chat/format.js";
-import { chatKeys } from "../chat/keys.js";
+import { CALL_FRAME_ALLOW } from "../chat/callRoom.js";
+import { chatKeys, type ActiveRoom } from "../chat/keys.js";
 import { useEnterCall } from "../chat/useEnterCall.js";
 
 /**
@@ -225,9 +226,11 @@ function ChannelPage({ channelId }: { channelId: string }) {
 /**
  * 通話 — a call in this conversation.
  *
- * Atarimae is not carrying the audio: the provider's room opens in its own
- * window. Embedding it would mean a vendor's SDK on every page, which is
- * exactly the lock-in that a configurable provider exists to avoid.
+ * Atarimae is still not carrying the audio. The room is either a window of its
+ * own or a frame here, and which one is the administrator's answer about their
+ * provider — nothing about this changes what Atarimae holds. A frame is not an
+ * SDK: no third-party script runs on this origin, which is why `script-src`
+ * did not have to move to allow it.
  */
 function CallPanel({ channelId }: { channelId: string }) {
   const queryClient = useQueryClient();
@@ -237,6 +240,20 @@ function CallPanel({ channelId }: { channelId: string }) {
   const calls = useQuery({
     queryKey: chatKeys.calls(channelId),
     queryFn: () => api.calls.inChannel(channelId),
+  });
+
+  /**
+   * The room this person is in, when it is shown here rather than in a window.
+   *
+   * Written by the enter-call hook — which the banner at the top of every
+   * screen also uses — and never fetched, the same arrangement as the ringing
+   * call itself.
+   */
+  const { data: room } = useQuery<ActiveRoom | null>({
+    queryKey: chatKeys.activeRoom(),
+    queryFn: () => null,
+    enabled: false,
+    initialData: null,
   });
 
   const live = calls.data?.items.find((call) => call.endedAt === null) ?? null;
@@ -252,9 +269,51 @@ function CallPanel({ channelId }: { channelId: string }) {
   const onTheCall =
     live?.participants.some((p) => p.userId === user?.id && p.leftAt === null) ?? false;
 
+  /**
+   * Shown only for the call that is actually running here.
+   *
+   * Both halves matter. Without the channel check a room started in another
+   * conversation would appear in this one; without the live check the frame
+   * would sit there after everybody left, which is a meeting room that looks
+   * open and is not.
+   */
+  const activeRoom =
+    room && live && room.callId === live.id && room.channelId === channelId ? room : null;
+
+  const closeRoom = () =>
+    queryClient.setQueryData<ActiveRoom | null>(chatKeys.activeRoom(), null);
+
+  /**
+   * The one framing failure a browser will actually tell you about.
+   *
+   * `Content-Security-Policy` travels with the document, so a page loaded
+   * before an administrator marked the provider embeddable is still enforcing
+   * the old `frame-src` — the server says yes, this browser refuses, and the
+   * panel is blank. That refusal fires `securitypolicyviolation`, unlike the
+   * provider's own `X-Frame-Options`, which fires nothing at all.
+   *
+   * So the detectable half is handled: the room falls back to a link, and the
+   * person gets something that works instead of a rectangle that does not.
+   */
+  useEffect(() => {
+    if (!activeRoom?.embed) return;
+
+    const onViolation = (event: SecurityPolicyViolationEvent) => {
+      if (!event.violatedDirective.startsWith("frame-src")) return;
+      queryClient.setQueryData<ActiveRoom>(chatKeys.activeRoom(), {
+        ...activeRoom,
+        embed: false,
+      });
+    };
+
+    document.addEventListener("securitypolicyviolation", onViolation);
+    return () => document.removeEventListener("securitypolicyviolation", onViolation);
+  }, [activeRoom, queryClient]);
+
   const leave = useMutation({
     mutationFn: (callId: string) => api.calls.leave(callId),
     onSuccess: async () => {
+      closeRoom();
       await queryClient.invalidateQueries({ queryKey: chatKeys.calls(channelId) });
     },
   });
@@ -316,6 +375,64 @@ function CallPanel({ channelId }: { channelId: string }) {
       )}
 
       {/*
+       * The room, in the conversation.
+       *
+       * `allow` is not decoration: the response header delegates camera and
+       * microphone to the provider's origin, and this is the frame asking for
+       * what was delegated. One without the other is a meeting room that loads
+       * and cannot hear anybody.
+       */}
+      {activeRoom?.embed && (
+        <div className="call-room" data-testid="call-room">
+          <iframe
+            className="call-room__frame"
+            src={activeRoom.joinUrl}
+            allow={CALL_FRAME_ALLOW}
+            title="通話"
+            data-testid="call-frame"
+          />
+          <p className="call-room__note muted">
+            {/*
+             * Whose page this is, said plainly. The media belongs to the
+             * provider, and a frame is exactly the place somebody could stop
+             * being able to tell.
+             */}
+            通話画面は {hostOf(activeRoom.joinUrl)} のものです。
+            {/*
+             * A browser gives no way to know whether the provider refused to
+             * be framed, so an empty panel is possible and has to have an exit.
+             */}
+            <a
+              className="call-room__out"
+              href={activeRoom.joinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="open-call-window"
+            >
+              別の窓で開く
+            </a>
+          </p>
+          <p className="call-room__note muted">
+            会話を移動すると、この画面は閉じます。通話に戻ることはできます。
+          </p>
+        </div>
+      )}
+
+      {/*
+       * Embedding was expected and the server said no — the provider was
+       * changed or stopped while this page was open. There is no window handle
+       * left and one cannot be opened without a fresh press, so the room is
+       * offered as something to press rather than by taking this tab there.
+       */}
+      {activeRoom && !activeRoom.embed && (
+        <p className="alert alert--inline" data-testid="call-link">
+          <a href={activeRoom.joinUrl} target="_blank" rel="noopener noreferrer">
+            通話の画面を開く
+          </a>
+        </p>
+      )}
+
+      {/*
        * The history. Who joined is the difference between a call that happened
        * and one that rang out, and that is the thing anybody wants to know
        * afterwards.
@@ -339,6 +456,20 @@ function CallPanel({ channelId }: { channelId: string }) {
       )}
     </section>
   );
+}
+
+/**
+ * The provider's host, for saying whose page is in the frame.
+ *
+ * Falls back to nothing rather than throwing: a malformed join URL is the
+ * provider's problem, and it must not take the whole conversation down with it.
+ */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "通話サービス";
+  }
 }
 
 function callDuration(startedAt: string, endedAt: string): string {

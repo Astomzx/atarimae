@@ -4,6 +4,7 @@ import type {
   AnnouncementSummary,
   AnnouncementTarget,
   AuthenticatedUser,
+  CallEmbeddingResponse,
   CallProvider,
   CommandSummary,
   CreateAnnouncementRequest,
@@ -400,6 +401,14 @@ export const api = {
     disableProvider: (id: string) =>
       send<CallProvider>("POST", `/call-providers/${id}/disable`),
 
+    /**
+     * Asked before the button is pressed, never after.
+     *
+     * A popup blocker only allows a new window during the gesture that asked
+     * for one, so whether to open one has to be known in advance.
+     */
+    embedding: () => request<CallEmbeddingResponse>("/call-embedding"),
+
     inChannel: (channelId: string) =>
       request<ListCallsResponse>(`/channels/${channelId}/calls`),
     start: (channelId: string) =>
@@ -485,6 +494,12 @@ const MESSAGES: Record<string, string> = {
   CALL_PROVIDER_TEMPLATE_INVALID:
     "会議室 URL は http または https で、{room} を含む必要があります。",
   CALL_PROVIDER_INCOMPLETE: "通話サービスの設定が不完全です。",
+  /*
+   * Why, not just what. The administrator ticked a box that cannot work for
+   * this kind of provider, and the reason is the browser rather than Atarimae.
+   */
+  CALL_PROVIDER_NOT_EMBEDDABLE:
+    "アプリ内に埋め込めるのは、会議室 URL を指定する方式のみです。URL の取得を API に問い合わせる方式では、ブラウザーに必要な情報を事前に伝えられません。",
   CALL_ALREADY_ENDED: "この通話は既に終了しています。",
   NETWORK_UNREACHABLE:
     "サーバーに接続できません。オフラインの可能性があります。接続を確認してから、もう一度お試しください。",

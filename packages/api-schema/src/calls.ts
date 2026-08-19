@@ -34,6 +34,11 @@ export const CallProvider = Type.Object(
     responseUrlPath: Type.Union([Type.String(), Type.Null()]),
     /** Whether a secret is configured. Never the secret itself. */
     hasSecret: Type.Boolean(),
+    /**
+     * Whether the room may be shown inside Atarimae rather than in its own
+     * window. `url` providers only — see the create request.
+     */
+    embeddable: Type.Boolean(),
     isDefault: Type.Boolean(),
     disabledAt: NullableTimestamp,
     createdAt: Timestamp,
@@ -66,6 +71,19 @@ export const CreateCallProviderRequest = Type.Object(
     responseUrlPath: Type.Optional(Type.String({ maxLength: 200 })),
     /** Substituted into headers and body as `{secret}`. Stored encrypted. */
     secret: Type.Optional(Type.String({ maxLength: 2000 })),
+    /**
+     * Show the room inside Atarimae instead of opening a window.
+     *
+     * kind 'url' only, and the refusal for 'http' is not a limitation of the
+     * form — it is what the browser requires. The origin has to be in a
+     * response header *before* anybody presses 通話, and an HTTP provider's
+     * join URL does not exist until it has been asked for.
+     *
+     * Off by default, and it has to be asked for rather than detected: a page
+     * cannot tell whether a cross-origin frame loaded or was refused by the
+     * provider's own X-Frame-Options.
+     */
+    embeddable: Type.Optional(Type.Boolean()),
     isDefault: Type.Optional(Type.Boolean()),
   },
   { $id: "CreateCallProviderRequest" },
@@ -114,10 +132,39 @@ export const JoinCallResponse = Type.Object(
   {
     call: Call,
     joinUrl: Type.String(),
+    /**
+     * Whether to show this URL in a frame rather than open a window.
+     *
+     * An instruction to the client, not a description of the provider — it is
+     * true only when the browser will actually permit the frame, which means
+     * the `frame-src` this server is currently sending names this URL's
+     * origin. A call that started under a provider since changed or stopped
+     * gets false, because framing it would be a blank panel with nothing on
+     * screen explaining why.
+     */
+    embed: Type.Boolean(),
   },
   { $id: "JoinCallResponse" },
 );
 export type JoinCallResponse = Static<typeof JoinCallResponse>;
+
+/**
+ * Whether calls are framed here, asked before anybody presses 通話.
+ *
+ * The client needs this in advance rather than in the join response, because a
+ * popup blocker only allows `window.open` during the gesture that asked for
+ * one — so the decision "window or frame" has to be made before the round
+ * trip, not after it.
+ *
+ * A boolean, not the origin. Anything that loads a page here already learns
+ * the origin from the `frame-src` header; this endpoint does not need to hand
+ * out configuration to do its job.
+ */
+export const CallEmbeddingResponse = Type.Object(
+  { embeddable: Type.Boolean() },
+  { $id: "CallEmbeddingResponse" },
+);
+export type CallEmbeddingResponse = Static<typeof CallEmbeddingResponse>;
 
 export const CallErrorCode = {
   /** No provider is configured, so there is nowhere to hold a call. */
@@ -128,6 +175,8 @@ export const CallErrorCode = {
   CALL_PROVIDER_TEMPLATE_INVALID: "CALL_PROVIDER_TEMPLATE_INVALID",
   /** kind 'http' without a request URL or a response path. */
   CALL_PROVIDER_INCOMPLETE: "CALL_PROVIDER_INCOMPLETE",
+  /** Asking for an embeddable provider whose room address is not known ahead. */
+  CALL_PROVIDER_NOT_EMBEDDABLE: "CALL_PROVIDER_NOT_EMBEDDABLE",
   /** Joining or ending a call that is already over. */
   CALL_ALREADY_ENDED: "CALL_ALREADY_ENDED",
 } as const;

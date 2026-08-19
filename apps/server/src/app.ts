@@ -61,6 +61,12 @@ declare module "fastify" {
     secrets: SecretStore;
     /** Rebuilds the cached headers when the call provider changes. */
     refreshSecurityHeaders(callFrameOrigin: string | null): void;
+    /**
+     * The origin currently allowed in `frame-src`, or null when nothing may be
+     * framed. What the browser will enforce, which is not always what the
+     * provider row says — see `mayBeFramed`.
+     */
+    readonly callFrameOrigin: string | null;
     attachments: AttachmentStore;
   }
 }

@@ -140,6 +140,35 @@ clickjacking.
 complaint, that is a window-management problem with better answers than an
 embedded SDK.
 
+### What was wrong with all of that — done anyway
+
+Two errors, and together they were the entire cost.
+
+**The paragraph above conflated two directives.** "The frame one guards
+acknowledgement against clickjacking" is `frame-ancestors`, which is who may
+frame _us_. What embedding needs is `frame-src`, which is what _we_ may frame.
+The clickjacking defence around 確認 does not move, and there is now a test that
+fails if it ever does.
+
+**And an iframe is not an SDK.** A room URL in a frame runs no third-party
+JavaScript on this origin, so `script-src 'self'` does not move either — the
+objection `calls.md` recorded is avoided rather than overruled. Provider
+independence is untouched: there is still nothing of a vendor's in this
+codebase, and swapping providers is still a settings change.
+
+What actually moved: `frame-src` gains exactly one origin, and
+`Permissions-Policy` grants camera and microphone to that origin and never to
+this one. Both are off unless an administrator ticks a box on a `url` provider.
+
+What it cost that was not foreseen: a browser gives a page **no way to tell
+whether a frame was refused** by the provider, so it cannot be detected and has
+to be asked for, and the interface needs a visible way out of an empty panel.
+And the framed room closes when you leave the conversation, where a window did
+not. Both are written down in `calls.md` rather than smoothed over.
+
+**Recommendation as built: do it, opt-in per provider**, with the window as the
+default and the way out always on screen.
+
 ---
 
 ## 6. Protection against a hostile administrator
@@ -174,8 +203,15 @@ rather than only by another Owner.
 | 2. Account lockout                  | Keep; notify instead of locking                      |
 | 3. Backup over HTTP                 | **Done** (M6a) — Owner + password + audited          |
 | 4. Encrypting the archive           | **Done** (M6a) — `--encrypt-to`, no key held here    |
-| 5. Embedding the call room          | Keep                                                 |
+| 5. Embedding the call room          | **Done** — opt-in per provider; the CSP moved by one |
 | 6. Hostile administrator            | Keep; show people their own audit trail              |
 
-Two to build, four to leave — and three of the four have a smaller, honest
-alternative worth doing instead.
+Four built, two left — and both of the two have a smaller, honest alternative
+worth doing instead: notify an account of repeated failures rather than lock it,
+and show a person the audit trail of actions taken on their own account.
+
+Item 5 is the one worth noticing: it was refused on a reading of two CSP
+directives that turned out to be one directive misread. The lesson is not "be
+braver about the CSP" — it is that a refusal written down in enough detail to be
+checked is a refusal somebody can find the error in. The four still-standing
+reasons in this file are all still standing after being checked the same way.

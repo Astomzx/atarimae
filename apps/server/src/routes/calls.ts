@@ -1,4 +1,5 @@
 import {
+  CallEmbeddingResponse,
   CallErrorCode,
   CallProvider,
   CreateCallProviderRequest,
@@ -17,7 +18,13 @@ import { AuditAction, writeAudit } from "../lib/audit.js";
 import { checkProviderUrl } from "../lib/outbound-url.js";
 import { requireAuth, requirePersonRole } from "../plugins/auth.js";
 import {
+  frameOriginOf,
+  mayBeFramed,
+  refreshCallFrameOrigin,
+} from "../plugins/security-headers.js";
+import {
   CallProviderError,
+  DEFAULT_PROVIDER_ORDER,
   generateRoomName,
   resolveJoinUrl,
   type CallProviderConfig,
@@ -83,6 +90,7 @@ interface ProviderRow {
   request_body_template: string | null;
   response_url_path: string | null;
   secret_encrypted: string | null;
+  embeddable: boolean;
   is_default: boolean;
   disabled_at: string | null;
   created_at: string;
@@ -99,6 +107,7 @@ function toProvider(row: ProviderRow) {
     // Whether one is configured, never the value. There is no endpoint that
     // returns it: it exists to be sent to the provider, not to be read back.
     hasSecret: row.secret_encrypted !== null,
+    embeddable: row.embeddable,
     isDefault: row.is_default,
     disabledAt: row.disabled_at,
     createdAt: row.created_at,
@@ -118,12 +127,19 @@ function toConfig(row: ProviderRow): CallProviderConfig {
   };
 }
 
-const SELECT_PROVIDER = `
-  SELECT id, name, kind, url_template, request_url, request_headers,
-         request_body_template, response_url_path, secret_encrypted,
-         is_default, disabled_at, created_at
-    FROM call_providers
-`;
+/**
+ * Named once and used by the select and both returning clauses.
+ *
+ * Written out three times, adding a column means remembering three places, and
+ * the one that gets forgotten is a `RETURNING` — so the row a write hands back
+ * disagrees with the row the next read produces. That looks like the setting
+ * not having been saved.
+ */
+const PROVIDER_COLUMNS = `id, name, kind, url_template, request_url, request_headers,
+                          request_body_template, response_url_path, secret_encrypted,
+                          embeddable, is_default, disabled_at, created_at`;
+
+const SELECT_PROVIDER = `SELECT ${PROVIDER_COLUMNS} FROM call_providers`;
 
 export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
   // -------------------------------------------------------------- providers --
@@ -157,7 +173,10 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
           "`url` substitutes {room} into a template — enough for a self-hosted " +
           "Jitsi, and it needs no credential. `http` asks an API for a room and " +
           "reads the join URL out of the answer at `responseUrlPath`. The " +
-          "secret is stored encrypted and is never returned.",
+          "secret is stored encrypted and is never returned. `embeddable` shows " +
+          "the room inside Atarimae and is available to `url` providers only, " +
+          "because the origin has to reach a response header before anybody " +
+          "presses 通話.",
         body: CreateCallProviderRequest,
         response: { 201: CallProvider, ...errorResponses },
       },
@@ -185,6 +204,18 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
           );
         }
         assertUsableProviderUrl(input.urlTemplate.replace("{room}", "room"));
+
+        /**
+         * An embeddable template has to yield a usable origin, because that
+         * origin is what reaches `frame-src`. A template whose host is the
+         * placeholder would be stored happily and then framed by nothing.
+         */
+        if (input.embeddable && frameOriginOf(input.urlTemplate) === null) {
+          throw ApiError.unprocessable(
+            CallErrorCode.CALL_PROVIDER_NOT_EMBEDDABLE,
+            "An embeddable provider needs a template with a fixed http or https host.",
+          );
+        }
       } else {
         if (!input.requestUrl || !input.responseUrlPath) {
           throw ApiError.unprocessable(
@@ -193,6 +224,23 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
           );
         }
         assertUsableProviderUrl(input.requestUrl);
+
+        /**
+         * Refused rather than ignored, and this is a browser constraint rather
+         * than a missing feature. The frame's origin has to be in
+         * `frame-src` before the page that will hold the frame is served, and
+         * an HTTP provider's join URL does not exist until a call asks for it.
+         * Accepting the flag here would store a true that nothing could act
+         * on, which is the shape of failure this project exists to argue with.
+         */
+        if (input.embeddable) {
+          throw ApiError.unprocessable(
+            CallErrorCode.CALL_PROVIDER_NOT_EMBEDDABLE,
+            "Only a url provider can be embedded: an http provider's room " +
+              "address is not known until a call is started, and the browser " +
+              "needs it in a header before then.",
+          );
+        }
       }
 
       const encrypted = input.secret ? await app.secrets.encrypt(input.secret) : null;
@@ -210,11 +258,9 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
           `INSERT INTO call_providers
              (name, kind, url_template, request_url, request_headers,
               request_body_template, response_url_path, secret_encrypted,
-              is_default, created_by)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
-           RETURNING id, name, kind, url_template, request_url, request_headers,
-                     request_body_template, response_url_path, secret_encrypted,
-                     is_default, disabled_at, created_at`,
+              embeddable, is_default, created_by)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11)
+           RETURNING ${PROVIDER_COLUMNS}`,
           [
             input.name,
             input.kind,
@@ -224,23 +270,39 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
             input.kind === "http" ? (input.requestBodyTemplate ?? null) : null,
             input.kind === "http" ? input.responseUrlPath : null,
             encrypted,
+            input.embeddable ?? false,
             input.isDefault ?? false,
             actor.id,
           ],
         );
 
         // The name and kind. Never the secret, and never a rendered URL that
-        // might carry one.
+        // might carry one. Embedding is recorded because it is the one setting
+        // here that changes a response header for everybody.
         await writeAudit(client, request, {
           action: AuditAction.CALL_PROVIDER_CONFIGURED,
           actorUserId: actor.id,
           resourceType: "call_provider",
           resourceId: rows[0]!.id,
-          metadata: { name: input.name, kind: input.kind },
+          metadata: {
+            name: input.name,
+            kind: input.kind,
+            embeddable: input.embeddable ?? false,
+          },
         });
 
         return toProvider(rows[0]!);
       });
+
+      /*
+       * After the commit, and not conditional on `embeddable`.
+       *
+       * A provider that is not embeddable still changes the answer when it
+       * becomes the default, because the previous default may have been one —
+       * and then `frame-src` has to *narrow*. Skipping the refresh for the
+       * uninteresting-looking case is how a stale origin survives in a header.
+       */
+      await refreshCallFrameOrigin(app);
 
       return reply.status(201).send(provider);
     },
@@ -264,17 +326,43 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
         `UPDATE call_providers
             SET disabled_at = now(), is_default = false
           WHERE id = $1
-          RETURNING id, name, kind, url_template, request_url, request_headers,
-                    request_body_template, response_url_path, secret_encrypted,
-                    is_default, disabled_at, created_at`,
+          RETURNING ${PROVIDER_COLUMNS}`,
         [providerId],
       );
 
       const row = rows[0];
       if (!row) throw ApiError.notFound("Call provider not found.");
 
+      // Stopping the embedded provider has to take its origin back out of
+      // `frame-src`. This is the direction that matters: a header left naming
+      // somewhere an administrator has disconnected.
+      await refreshCallFrameOrigin(app);
+
       return toProvider(row);
     },
+  );
+
+  /**
+   * Whether calls are framed here. Everybody signed in may ask.
+   *
+   * Not administrator-only, because the interface needs it before the button is
+   * pressed: a popup blocker only allows `window.open` during the gesture that
+   * asked for one, so "window or frame" cannot wait for the join response.
+   *
+   * It answers from the header currently in force rather than from the provider
+   * row, so the client and the browser are reading the same fact.
+   */
+  app.get(
+    "/call-embedding",
+    {
+      preHandler: requireAuth,
+      schema: {
+        tags: ["calls"],
+        summary: "Whether a call is shown inside Atarimae",
+        response: { 200: CallEmbeddingResponse, ...errorResponses },
+      },
+    },
+    async () => ({ embeddable: app.callFrameOrigin !== null }),
   );
 
   // ------------------------------------------------------------------ calls --
@@ -371,7 +459,11 @@ export const callRoutes: FastifyPluginAsyncTypebox = async (app) => {
           `${SELECT_CALL} WHERE c.id = $1`,
           [callId],
         );
-        return { call: toCall(calls[0]!), joinUrl };
+        return {
+          call: toCall(calls[0]!),
+          joinUrl,
+          embed: mayBeFramed(app, joinUrl),
+        };
       });
 
       // After commit: ringing somebody for a call a rollback removed would be
@@ -538,7 +630,17 @@ async function joinCall(
     ]);
 
     void request;
-    return { call: toCall(rows[0]!), joinUrl: call.join_url };
+    return {
+      call: toCall(rows[0]!),
+      joinUrl: call.join_url,
+      /*
+       * Decided per join rather than stored with the call. The provider can be
+       * changed or stopped while a call is running, and the client has to be
+       * told what this browser will accept now — not what it would have
+       * accepted when the call started.
+       */
+      embed: mayBeFramed(app, call.join_url),
+    };
   });
 }
 
@@ -579,7 +681,7 @@ async function loadDefaultProvider(
   const { rows } = await db.query<ProviderRow>(
     `${SELECT_PROVIDER}
       WHERE disabled_at IS NULL
-      ORDER BY is_default DESC, created_at
+      ${DEFAULT_PROVIDER_ORDER}
       LIMIT 1`,
   );
 

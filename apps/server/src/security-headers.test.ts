@@ -3,7 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
-import { frameOriginOf, securityHeadersFor } from "./plugins/security-headers.js";
+import {
+  frameOriginOf,
+  mayBeFramed,
+  securityHeadersFor,
+} from "./plugins/security-headers.js";
 
 /**
  * The headers are constants, so most of this asserts that they reach a real
@@ -231,6 +235,43 @@ describe("when a call provider is embedded", () => {
   });
 });
 
+/**
+ * The client is told to frame something only when this browser will accept it,
+ * which is the header in force and not the flag in the database. The two differ
+ * while a call outlives the provider it was started with.
+ */
+describe("mayBeFramed", () => {
+  it("accepts a room at the origin currently allowed", () => {
+    expect(
+      mayBeFramed(
+        { callFrameOrigin: "https://meet.example.test" },
+        "https://meet.example.test/atarimae-1234?jwt=x",
+      ),
+    ).toBe(true);
+  });
+
+  it("refuses a room somewhere else, however similar", () => {
+    expect(
+      mayBeFramed(
+        { callFrameOrigin: "https://meet.example.test" },
+        "https://meet.example.test.attacker.test/room",
+      ),
+    ).toBe(false);
+    expect(
+      mayBeFramed(
+        { callFrameOrigin: "https://meet.example.test" },
+        "http://meet.example.test/room",
+      ),
+    ).toBe(false);
+  });
+
+  it("refuses everything when nothing may be framed", () => {
+    expect(mayBeFramed({ callFrameOrigin: null }, "https://meet.example.test/x")).toBe(
+      false,
+    );
+  });
+});
+
 describe("frameOriginOf", () => {
   /**
    * The origin, never the URL. A provider URL carries the room id, and which
@@ -257,5 +298,25 @@ describe("frameOriginOf", () => {
     expect(frameOriginOf("not a url")).toBeNull();
     expect(frameOriginOf("javascript:alert(1)")).toBeNull();
     expect(frameOriginOf("data:text/html,<script>")).toBeNull();
+  });
+
+  /**
+   * The one a URL parser lets through. `{` and `}` are not forbidden host code
+   * points, so this parses and its "origin" carries the placeholder — a CSP
+   * source that matches nothing, in a header nothing complains about.
+   */
+  it("refuses a host that is still a placeholder", () => {
+    expect(new URL("https://{room}.meet.example.test/").origin).toContain("{room}");
+    expect(frameOriginOf("https://{room}.meet.example.test/")).toBeNull();
+  });
+
+  /** `host-source` has no way to write an IPv6 literal. */
+  it("refuses an address a CSP cannot name", () => {
+    expect(frameOriginOf("https://[2001:db8::1]/meet")).toBeNull();
+  });
+
+  /** A private address is fine here — it is the office's own Jitsi. */
+  it("keeps an address on the office network", () => {
+    expect(frameOriginOf("https://10.0.0.20/meet/room")).toBe("https://10.0.0.20");
   });
 });

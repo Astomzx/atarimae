@@ -21,6 +21,17 @@ export const chatKeys = {
    * by another.
    */
   incomingCall: () => ["chat", "incoming-call"] as const,
+  /** Whether calls are framed here. Server state, and it changes rarely. */
+  callEmbedding: () => ["chat", "call-embedding"] as const,
+  /**
+   * The room this person is in right now, when it is shown inside Atarimae.
+   *
+   * In the cache rather than in the panel's own state because the banner at the
+   * top of every screen can start a call, and the frame appears in the
+   * conversation — two components, one fact. Like `incomingCall` it is never
+   * fetched.
+   */
+  activeRoom: () => ["chat", "active-room"] as const,
 };
 
 export interface IncomingCall {
@@ -28,4 +39,18 @@ export interface IncomingCall {
   channelId: string;
   startedBy: string;
   startedByName: string;
+}
+
+/**
+ * A room to show, and how.
+ *
+ * `embed: false` is the reconciliation case — the client expected to frame it
+ * and the server said no, so there is a URL and no window to put it in. The
+ * interface offers it as a link rather than pretending.
+ */
+export interface ActiveRoom {
+  callId: string;
+  channelId: string;
+  joinUrl: string;
+  embed: boolean;
 }

@@ -99,6 +99,7 @@ export {
 
 export {
   Call,
+  CallEmbeddingResponse,
   CallErrorCode,
   CallParticipant,
   CallProvider,

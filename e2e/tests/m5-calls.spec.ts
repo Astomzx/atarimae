@@ -237,4 +237,65 @@ test.describe("M5: 通話", () => {
     // Kept in the conversation: it happened, who was on it, and how long.
     await expect(page.getByTestId("call-history")).toContainText("2 名が参加");
   });
+
+  /**
+   * The room inside Atarimae, when an administrator says the provider permits
+   * it. Last on purpose: it changes where every call after it goes.
+   *
+   * What this test can show is the interface — no window, a frame with the room
+   * in it, the two permissions it asks for, and a way out for the case a
+   * browser cannot report. What it cannot show is the policy: here the document
+   * comes from Vite, which sends no CSP, where in production it is served by
+   * the API and carries `frame-src`. That half is in the server tests.
+   */
+  test("8. an embeddable provider puts the room in the conversation", async ({
+    page,
+  }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/service-accounts");
+
+    await page.getByTestId("toggle-create-call-provider").click();
+    await page.getByTestId("new-call-provider-name").fill("埋め込み Jitsi");
+    await page.getByTestId("new-call-provider-url").fill(MEET);
+    await page.getByTestId("new-call-provider-embeddable").check();
+    await page.getByTestId("create-call-provider-submit").click();
+
+    await expect(page.getByTestId("call-provider-list")).toContainText("アプリ内に表示");
+
+    /*
+     * A full load rather than clicking through: the policy travels with the
+     * document, so this is the step an operator has to take as well, and the
+     * interface says so on the form.
+     */
+    await openChannel(page);
+
+    // Nothing may open a window this time. If one does, the frame is not what
+    // the person got.
+    let windows = 0;
+    page.on("popup", () => {
+      windows += 1;
+    });
+
+    await page.getByTestId("start-call").click();
+
+    const frame = page.getByTestId("call-frame");
+    await expect(frame).toBeVisible();
+    await expect(frame).toHaveAttribute(
+      "src",
+      /^https:\/\/meet\.example\.test\/atarimae-/,
+    );
+    // The header delegates camera and microphone to the provider; this is the
+    // frame asking for what was delegated. One without the other is a meeting
+    // room that cannot hear anybody.
+    await expect(frame).toHaveAttribute("allow", /camera/);
+    await expect(frame).toHaveAttribute("allow", /microphone/);
+    expect(windows).toBe(0);
+
+    // A browser cannot tell whether the provider refused to be framed, so
+    // there is always a way out of an empty panel.
+    await expect(page.getByTestId("open-call-window")).toBeVisible();
+
+    await page.getByTestId("leave-call").click();
+    await expect(page.getByTestId("call-frame")).toHaveCount(0);
+  });
 });

@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, errorMessage } from "../api.js";
+import { chatKeys } from "../chat/keys.js";
 
 /**
  * Service accounts, and the tokens that let something other than a person use
@@ -76,6 +77,7 @@ function CallProviders() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [urlTemplate, setUrlTemplate] = useState("");
+  const [embeddable, setEmbeddable] = useState(false);
 
   const providers = useQuery({
     queryKey: ["call-providers"],
@@ -88,19 +90,31 @@ function CallProviders() {
         name: name.trim(),
         kind: "url",
         urlTemplate: urlTemplate.trim(),
+        embeddable,
         isDefault: true,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["call-providers"] });
+      /*
+       * Embedding changes a response header, and the header is attached to a
+       * document rather than to this fetch. Until the page is loaded again the
+       * browser is still enforcing the old `frame-src`, so the client is told
+       * to ask again rather than assuming.
+       */
+      await queryClient.invalidateQueries({ queryKey: chatKeys.callEmbedding() });
       setName("");
       setUrlTemplate("");
+      setEmbeddable(false);
       setOpen(false);
     },
   });
 
   const disable = useMutation({
     mutationFn: api.calls.disableProvider,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["call-providers"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["call-providers"] });
+      await queryClient.invalidateQueries({ queryKey: chatKeys.callEmbedding() });
+    },
   });
 
   const items = (providers.data?.items ?? []).filter(
@@ -172,6 +186,37 @@ function CallProviders() {
               </span>
             </label>
 
+            {/*
+             * Off unless asked for, and the hint says why it cannot be
+             * detected instead. A browser gives a page no way to tell whether
+             * a frame loaded or was refused by the provider — so "試してみて
+             * だめなら窓で開く" is not available, and somebody who knows the
+             * provider has to say so.
+             */}
+            <div className="field">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={embeddable}
+                  onChange={(event) => setEmbeddable(event.target.checked)}
+                  data-testid="new-call-provider-embeddable"
+                />
+                通話画面を Atarimae の中に表示する
+              </label>
+              <span className="field__hint">
+                対応していない通話サービスでは、画面が真っ白になります。
+                ブラウザーからは判別できないため、対応していることが分かっている場合のみ
+                有効にしてください。表示できないときは「別の窓で開く」から開けます。
+                {/*
+                 * The header travels with the document, so an open tab keeps
+                 * the old policy until it is loaded again. Said here because
+                 * the administrator is the one who will otherwise report it as
+                 * a bug.
+                 */}
+                この設定は、各利用者が画面を再読み込みしたあとに反映されます。
+              </span>
+            </div>
+
             <div className="form__actions">
               <button
                 type="submit"
@@ -223,6 +268,9 @@ function CallProviders() {
                   )}
                   {provider.hasSecret && (
                     <span className="badge badge--member">API キー設定済み</span>
+                  )}
+                  {provider.embeddable && (
+                    <span className="badge badge--member">アプリ内に表示</span>
                   )}
                 </span>
               </div>

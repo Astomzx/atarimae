@@ -105,8 +105,8 @@ twice inside one response breaks Fastify's serializer.
 | M6a security, attachments, backup/restore                        | done        |
 | M6b documentation, screenshots, release                          | not started |
 
-468 server unit tests, 60 web unit tests, 47 backup, 20 secret-store,
-18 desktop (Rust), 152 E2E, 11 migrations. CI green.
+487 server unit tests, 66 web unit tests, 47 backup, 20 secret-store,
+18 desktop (Rust), 154 E2E, 11 migrations. CI green.
 
 ## Suggested order from here
 
@@ -131,6 +131,20 @@ calls, from the same mechanism: a call belongs to a channel, and a channel is
 either a conversation or a group. The provider carries the media; Atarimae
 carries everything else. `docs/architecture/calls.md` says what that buys and
 what it costs.
+
+**The call room can now be embedded, and `reconsidering.md` item 5 is done.**
+Opt-in per `url` provider, off by default. Two things to know before touching
+it:
+
+- `frame-src` is what this application may frame; `frame-ancestors` is who may
+  frame it. Only the first moves for an embedded room. The clickjacking defence
+  around 確認 is the second and does not move — the doc that refused this item
+  conflated the two, which is the only reason it looked expensive.
+- Whether a room is framed is decided per join by comparing the join URL against
+  the origin **currently** in `frame-src`, never by reading the provider's flag.
+  A call outlives the provider it started with. `docs/engineering/embedded-call-room.md`
+  is what building it found, including a placeholder host that reached a CSP
+  header without any browser complaining.
 
 **`users.kind` is now a thing.** Any new query that means "people" must say
 `kind = 'person'`; service accounts are rows in the same table. The three
@@ -182,6 +196,12 @@ Owner creates a service account` on desktop), each passing on its own
   deletion, reactions, link previews, search, threads, presence or typing
   indicators. The interface matches the backend's scope exactly — nothing there
   is stubbed or disabled.
+- **An embedded call room closes when you leave the conversation.** A window did
+  not. Rejoining is one press and the frame comes back, but it is a real
+  difference between the two ways of holding a call, and it is why embedding is
+  opt-in. Also: the CSP origin is rebuilt when a provider is written through the
+  API, so a database changed underneath a running server — a restore — needs a
+  restart before the header agrees with it.
 - **Mentions are picked, never typed.** The composer converts a name chosen from
   the member list into the `@<uuid>` the server resolves; a name typed by hand
   stays plain text. Two members sharing a display name makes the conversion
@@ -213,6 +233,9 @@ Owner creates a service account` on desktop), each passing on its own
   doing nothing.
 - `docs/engineering/m6a-security.md` — the sign-in rate limit that could be
   bypassed with one header, and the two absences beside it.
+- `docs/engineering/embedded-call-room.md` — a host that was still a placeholder
+  reaching a CSP header, and the two things a browser will not tell you about a
+  frame.
 - `docs/engineering/shared-test-database.md` — two checkouts on one database,
   and how long it takes to notice that the measurement is the thing that is
   broken.

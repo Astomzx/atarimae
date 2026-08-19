@@ -38,6 +38,19 @@ export function generateRoomName(): string {
   return `atarimae-${randomUUID()}`;
 }
 
+/**
+ * Which of several configured providers a call actually uses: the default, or
+ * the oldest one if nobody has named a default.
+ *
+ * Exported because two places have to agree on it. The routes pick the
+ * provider a call is held with; the security headers put that provider's
+ * origin into `frame-src`. Written out twice, they would disagree the moment
+ * an organisation has two providers — the CSP naming one and the call landing
+ * on the other, which is a frame the browser refuses for reasons nothing on
+ * screen can explain.
+ */
+export const DEFAULT_PROVIDER_ORDER = "ORDER BY is_default DESC, created_at";
+
 export class CallProviderError extends Error {
   override readonly name = "CallProviderError";
 }

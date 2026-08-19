@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { SESSION_COOKIE } from "./lib/session.js";
+import { refreshCallFrameOrigin } from "./plugins/security-headers.js";
 import {
   CallProviderError,
   generateRoomName,
@@ -49,6 +50,14 @@ beforeEach(async () => {
               user_org_units, org_units, users
        RESTART IDENTITY CASCADE`,
   );
+
+  /*
+   * The frame origin is cached in memory and rebuilt when a provider is
+   * written, so a TRUNCATE alone leaves the previous test's origin in the
+   * header. Without this, one embedding test would decide the answer for every
+   * test after it.
+   */
+  await refreshCallFrameOrigin(app);
 
   const response = await app.inject({
     method: "POST",
@@ -258,6 +267,242 @@ describe("configuring a provider", () => {
     });
 
     expect(r.statusCode).toBe(403);
+  });
+});
+
+/**
+ * Showing the room inside Atarimae rather than in a window.
+ *
+ * The claims: the CSP names exactly the provider calls are actually held with,
+ * the client is told to frame only what this browser will accept, and a
+ * setting nothing could act on is refused rather than stored.
+ */
+describe("embedding the room", () => {
+  async function configureEmbeddable(
+    urlTemplate = "https://meet.example.test/{room}",
+  ): Promise<string> {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/call-providers",
+      headers: as(ownerCookie),
+      payload: {
+        name: "社内 Jitsi",
+        kind: "url",
+        urlTemplate,
+        embeddable: true,
+        isDefault: true,
+      },
+    });
+    if (r.statusCode !== 201) throw new Error(`provider: ${r.statusCode} ${r.body}`);
+    return r.json().id;
+  }
+
+  const csp = async (): Promise<string> => {
+    const r = await app.inject({ method: "GET", url: "/api/v1/health" });
+    return String(r.headers["content-security-policy"]);
+  };
+
+  it("stores the flag and hands it back", async () => {
+    await configureEmbeddable();
+
+    const r = await app.inject({
+      method: "GET",
+      url: "/api/v1/call-providers",
+      headers: as(ownerCookie),
+    });
+
+    expect(r.json().items[0]).toMatchObject({ embeddable: true });
+  });
+
+  /**
+   * The origin and not the URL. A provider URL carries the room id, and which
+   * meeting is happening is not a thing to put in a response header.
+   */
+  it("puts the provider's origin into frame-src, with the room left out", async () => {
+    await configureEmbeddable();
+
+    expect(await csp()).toContain("frame-src https://meet.example.test;");
+    expect(await csp()).not.toContain("{room}");
+  });
+
+  /** The clickjacking defence around 確認 is a different directive. */
+  it("does not become framable itself", async () => {
+    await configureEmbeddable();
+
+    expect(await csp()).toContain("frame-ancestors 'none'");
+  });
+
+  it("tells the client to frame the room it just started", async () => {
+    await configureEmbeddable();
+    const channelId = await createChannel();
+
+    const r = await startCall(ownerCookie, channelId);
+
+    expect(r.json().embed).toBe(true);
+  });
+
+  it("leaves a provider nobody marked embeddable in its own window", async () => {
+    await configureUrlProvider();
+    const channelId = await createChannel();
+
+    const r = await startCall(ownerCookie, channelId);
+
+    expect(r.json().embed).toBe(false);
+    expect(await csp()).toContain("frame-src 'none'");
+  });
+
+  /**
+   * Not a stored true that nothing can act on. An HTTP provider's join URL
+   * does not exist until a call asks for it, and the browser needs the origin
+   * in a header before the page that will hold the frame is served.
+   */
+  it("refuses to embed an http provider", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/call-providers",
+      headers: as(ownerCookie),
+      payload: {
+        name: "外部サービス",
+        kind: "http",
+        requestUrl: "https://api.example.test/rooms",
+        responseUrlPath: "data.url",
+        embeddable: true,
+      },
+    });
+
+    expect(r.statusCode).toBe(422);
+    expect(r.json().code).toBe("CALL_PROVIDER_NOT_EMBEDDABLE");
+  });
+
+  /**
+   * A host that varies per room cannot be in a header either — and this one
+   * passes every other check, because with {room} substituted it is a perfectly
+   * good URL.
+   */
+  it("refuses a template whose host is not fixed", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/call-providers",
+      headers: as(ownerCookie),
+      payload: {
+        name: "部屋ごとに別ホスト",
+        kind: "url",
+        urlTemplate: "https://{room}.meet.example.test/",
+        embeddable: true,
+      },
+    });
+
+    expect(r.statusCode).toBe(422);
+    expect(r.json().code).toBe("CALL_PROVIDER_NOT_EMBEDDABLE");
+  });
+
+  /**
+   * The direction that matters. An origin left in `frame-src` after the
+   * provider it belonged to was disconnected is a header naming somewhere the
+   * administrator has already said no to.
+   */
+  it("takes the origin back out when the provider is stopped", async () => {
+    const providerId = await configureEmbeddable();
+
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/call-providers/${providerId}/disable`,
+      headers: as(ownerCookie),
+    });
+
+    expect(await csp()).toContain("frame-src 'none'");
+  });
+
+  /**
+   * Mid-call, and the reason `embed` is decided per join rather than stored
+   * with the call: the room is still reachable, and this browser will no longer
+   * put it in a frame.
+   */
+  it("stops offering to frame a call whose provider has gone", async () => {
+    const providerId = await configureEmbeddable();
+    const channelId = await createChannel();
+    const started = await startCall(ownerCookie, channelId);
+    expect(started.json().embed).toBe(true);
+
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/call-providers/${providerId}/disable`,
+      headers: as(ownerCookie),
+    });
+
+    const rejoined = await app.inject({
+      method: "POST",
+      url: `/api/v1/calls/${started.json().call.id}/join`,
+      headers: as(ownerCookie),
+    });
+
+    expect(rejoined.json().embed).toBe(false);
+    expect(rejoined.json().joinUrl).toBe(started.json().joinUrl);
+  });
+
+  /**
+   * Two providers, and the header must name the one calls are held with. The
+   * embeddable one here is not the default, so framing it would be a frame
+   * pointed at somewhere no call ever goes.
+   */
+  it("names the provider calls actually use, not another embeddable one", async () => {
+    await configureUrlProvider("https://used.example.test/{room}");
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/call-providers",
+      headers: as(ownerCookie),
+      payload: {
+        name: "使われない方",
+        kind: "url",
+        urlTemplate: "https://unused.example.test/{room}",
+        embeddable: true,
+      },
+    });
+
+    const channelId = await createChannel();
+    const r = await startCall(ownerCookie, channelId);
+
+    expect(await csp()).toContain("frame-src 'none'");
+    expect(await csp()).not.toContain("unused.example.test");
+    expect(r.json().embed).toBe(false);
+  });
+
+  /**
+   * Asked before the button is pressed, because a popup blocker only allows a
+   * window during the gesture that asked for one. Not administrator-only: it is
+   * the person in the conversation who needs the answer.
+   */
+  describe("the answer everybody may ask for", () => {
+    it("says yes once a provider is embeddable", async () => {
+      await configureEmbeddable();
+      await createMember("tanaka@example.test", "田中");
+      const tanaka = await signIn("tanaka@example.test");
+
+      const r = await app.inject({
+        method: "GET",
+        url: "/api/v1/call-embedding",
+        headers: as(tanaka),
+      });
+
+      expect(r.statusCode).toBe(200);
+      expect(r.json()).toEqual({ embeddable: true });
+    });
+
+    it("says no when nothing is configured", async () => {
+      const r = await app.inject({
+        method: "GET",
+        url: "/api/v1/call-embedding",
+        headers: as(ownerCookie),
+      });
+
+      expect(r.json()).toEqual({ embeddable: false });
+    });
+
+    it("still needs somebody signed in", async () => {
+      const r = await app.inject({ method: "GET", url: "/api/v1/call-embedding" });
+
+      expect(r.statusCode).toBe(401);
+    });
   });
 });
 

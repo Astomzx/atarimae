@@ -135,6 +135,50 @@ also found that every backup command in `docs/deployment/docker.md` was
 unrunnable — they said `pnpm`, and the runtime image has Node and no package
 manager. See `docs/engineering/docker-first-build.md`.
 
+## Encrypting the archive
+
+```bash
+pnpm backup --encrypt-to age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+pnpm restore atarimae-2026-08-19.tar.gz.age --identity ~/.age/key.txt
+```
+
+Optional, and the shape of it is the whole point. This file refused archive
+encryption once, and that refusal still stands for the obvious version: a
+passphrase or a generated key would be a _second_ thing to lose alongside
+`ENCRYPTION_KEY_CURRENT`, and an operator who loses one loses both. Moving a
+problem is not solving it.
+
+So: **Atarimae never generates, stores or sees a key.** You name a recipient
+you already manage — an age public key, or an SSH public key you already use —
+and `age` encrypts to it. Decryption needs an identity file this project also
+never touches. Losing that key is the same event as losing your SSH key, which
+is a risk operators already have habits about.
+
+`age` rather than GPG: one binary, one flag, no keyring, no agent, no trust
+model to explain.
+
+**If `age` is not installed, this refuses.** It does not fall back to writing
+the archive unencrypted. A backup that is not encrypted is recoverable; a
+backup somebody _believes_ is encrypted, on a USB drive in a van, is not a
+mistake they find out about in time.
+
+Encryption happens last, after reconciliation and after the digests. Those are
+about what went in; doing it earlier would only mean verifying ciphertext.
+
+The recipient goes on the command line and the identity does not — a public key
+is not a secret, so a process list seeing it costs nothing, while a private key
+is passed as a path and never as its contents.
+
+**What has not been verified.** `age` is not installed on the machine this was
+written on, so the real binary has never been run against it. Sixteen tests
+cover the command that would be handed to it and every way it can fail —
+missing, exiting non-zero, or claiming success while producing zero bytes,
+which would otherwise write an empty file with a reassuring name. The CLI's own
+handling of an `.age` file was exercised for real: a missing `--identity` is
+named, and a redundant one is pointed out rather than ignored. What remains
+unproven is that real `age` accepts these arguments, and that is one
+`age --version` away from being settled.
+
 ## Deliberately not done
 
 - **No scheduling.** `cron` exists and is better at it. The tool's job is to
@@ -143,10 +187,9 @@ manager. See `docs/engineering/docker-first-build.md`.
   organisation small enough to run one container has a database measured in
   megabytes, and an incremental chain is a way to discover that one link is
   missing only when restoring.
-- **No encryption of the archive itself.** It contains password hashes and
-  message content and should be treated accordingly, but adding a second key to
-  lose in order to protect a file the operator already has to store safely
-  moves the problem rather than solving it.
+- ~~No encryption of the archive itself.~~ **Optional, via `age`.** The
+  original objection stands for the obvious version and is why this is the
+  narrow one: Atarimae never generates, stores or sees a key. See below.
 - **No backup over HTTP.** There is no admin button for this. A full dump
   streamed through the application is an endpoint that returns the entire
   database, and no permission check is worth that much.

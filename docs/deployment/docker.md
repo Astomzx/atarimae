@@ -202,6 +202,13 @@ it restores to a system that starts, signs people in and shows the paperclip on
 every message, and produces a broken download the first time somebody clicks
 one.
 
+### Encrypting it
+
+Add `--encrypt-to <recipient>` to encrypt the archive to an age or SSH public
+key you already manage. Atarimae never generates, stores or sees a key — and if
+`age` is not installed it refuses rather than quietly writing a plaintext file
+you believe is encrypted. Restore with `--identity <your key file>`.
+
 **`ENCRYPTION_KEY_CURRENT`, from `.env`, is deliberately not in the archive.**
 It decrypts the stored SMTP password, and a file containing both the ciphertext
 and the key protects nothing. Store it somewhere the archives are not. The

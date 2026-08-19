@@ -41,6 +41,12 @@ import {
   type ArchivedFile,
   type Manifest,
 } from "./manifest.js";
+import {
+  decryptWith,
+  encryptTo,
+  ENCRYPTED_SUFFIX,
+  isEncryptedPath,
+} from "./encryption.js";
 import { runAs } from "./invocation.js";
 import { describeReconcile, reconcile } from "./reconcile.js";
 import { createTar, readTar } from "./tar.js";
@@ -400,14 +406,49 @@ async function backup(argv: string[], root: string): Promise<void> {
     ...files.map((file) => ({ name: ATTACHMENT_PREFIX + file.key, data: file.data })),
   ]);
 
-  const compressed = gzipSync(archive);
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, compressed);
+  let compressed: Uint8Array = gzipSync(archive);
+  let written = out;
 
-  say(`  wrote ${out}`);
+  /*
+   * Encrypted last, after everything has been checked. The reconciliation and
+   * the digests are about what went in; encryption is about who can read it
+   * afterwards, and doing it earlier would only mean verifying ciphertext.
+   */
+  const recipientIndex = argv.indexOf("--encrypt-to");
+  if (recipientIndex !== -1) {
+    const recipient = argv[recipientIndex + 1];
+    if (!recipient || recipient.startsWith("--")) {
+      fail(
+        "--encrypt-to needs a recipient: an age public key, or an SSH public\n" +
+          "key you already use.\n\n" +
+          `  ${runAs("backup")} --encrypt-to age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p`,
+      );
+    }
+
+    try {
+      compressed = encryptTo(compressed, recipient);
+    } catch (error) {
+      fail((error as Error).message);
+    }
+
+    written = out.endsWith(ENCRYPTED_SUFFIX) ? out : `${out}${ENCRYPTED_SUFFIX}`;
+  }
+
+  mkdirSync(dirname(written), { recursive: true });
+  writeFileSync(written, compressed);
+
+  say(`  wrote ${written}`);
   say(
     `  ${describeBytes(compressed.length)} compressed, from ${describeBytes(archive.length)}`,
   );
+
+  if (recipientIndex !== -1) {
+    say();
+    say("  Encrypted with age. Atarimae holds no key for this file — decrypt");
+    say("  it with the identity matching the recipient you named:");
+    say();
+    say(`    ${runAs("restore")} ${written} --identity <your key file>`);
+  }
   say();
 
   /*
@@ -450,12 +491,45 @@ interface OpenedArchive {
  * restore has written a single byte. The alternative — discovering damage
  * halfway through — leaves a system that is neither the old one nor the new.
  */
-function open(path: string): OpenedArchive {
+function open(path: string, identity?: string): OpenedArchive {
   if (!existsSync(path)) fail(`No such archive: ${path}`);
+
+  let raw: Uint8Array = new Uint8Array(readFileSync(path));
+
+  /*
+   * Decided by the file, not by the flag. An `.age` file handed to a command
+   * without `--identity` gets a sentence naming what is missing, rather than
+   * gunzip failing on ciphertext and reporting "incorrect header check" —
+   * which is true, useless, and about the wrong layer.
+   */
+  if (isEncryptedPath(path)) {
+    if (!identity) {
+      fail(
+        `${path} is encrypted with age.\n\n` +
+          `Give the identity file matching the recipient it was encrypted to:\n\n` +
+          `  … ${path} --identity <your key file>`,
+      );
+    }
+    if (!existsSync(identity)) fail(`No such identity file: ${identity}`);
+
+    try {
+      raw = decryptWith(raw, identity);
+    } catch (error) {
+      fail((error as Error).message);
+    }
+  } else if (identity) {
+    /*
+     * Said rather than ignored. Somebody passing --identity believes this file
+     * is encrypted, and silently reading a plaintext archive would confirm a
+     * belief that is wrong about where their data has been sitting.
+     */
+    say(`  Note: ${path} is not encrypted; --identity was not needed.`);
+    say();
+  }
 
   let entries;
   try {
-    entries = readTar(gunzipSync(readFileSync(path)));
+    entries = readTar(gunzipSync(raw));
   } catch (error) {
     fail(`Could not read ${path}: ${(error as Error).message}`);
   }
@@ -524,11 +598,22 @@ function describeArchive(manifest: Manifest): void {
   }
 }
 
+/** `--identity <file>`, for an archive that was encrypted to a recipient. */
+function identityFrom(argv: string[]): string | undefined {
+  const index = argv.indexOf("--identity");
+  if (index === -1) return undefined;
+  const value = argv[index + 1];
+  if (!value || value.startsWith("--")) {
+    fail("--identity needs the path to your age key file.");
+  }
+  return value;
+}
+
 function verify(argv: string[]): void {
   const path = argv.find((argument) => !argument.startsWith("--"));
   if (!path) fail(`Usage: ${runAs("verify")} <file>`);
 
-  const { manifest, attachments } = open(resolve(path));
+  const { manifest, attachments } = open(resolve(path), identityFrom(argv));
 
   say("Archive is internally complete.");
   say();
@@ -564,7 +649,7 @@ async function restore(argv: string[], root: string): Promise<void> {
 
   requireClientTool("psql");
 
-  const { manifest, dump, attachments } = open(resolve(path));
+  const { manifest, dump, attachments } = open(resolve(path), identityFrom(argv));
 
   say("Atarimae restore");
   say();

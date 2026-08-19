@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
-import { securityHeadersFor } from "./plugins/security-headers.js";
+import { frameOriginOf, securityHeadersFor } from "./plugins/security-headers.js";
 
 /**
  * The headers are constants, so most of this asserts that they reach a real
@@ -159,5 +159,103 @@ describe("HSTS", () => {
 
     expect(hsts).not.toContain("includeSubDomains");
     expect(hsts).not.toContain("preload");
+  });
+});
+
+/**
+ * An embedded call provider is the only thing that moves any of this, and the
+ * direction it moves in is the whole reason it was affordable.
+ */
+describe("when a call provider is embedded", () => {
+  const EMBEDDED = { production: true, callFrameOrigin: "https://meet.example.test" };
+
+  /**
+   * The distinction that made this possible. `frame-src` is what *we* may put
+   * in a frame; `frame-ancestors` is who may put *us* in one. Only the first
+   * moves, so the clickjacking defence around 確認 is untouched.
+   */
+  it("does not weaken the clickjacking defence", () => {
+    const directives = policy(securityHeadersFor(EMBEDDED)["content-security-policy"]);
+
+    expect(directives).toContain("frame-ancestors 'none'");
+    expect(securityHeadersFor(EMBEDDED)["x-frame-options"]).toBe("DENY");
+  });
+
+  it("allows exactly the one origin in frame-src", () => {
+    const directives = policy(securityHeadersFor(EMBEDDED)["content-security-policy"]);
+
+    expect(directives).toContain("frame-src https://meet.example.test");
+    expect(directives).not.toContain("frame-src 'none'");
+    expect(directives.join("; ")).not.toContain("*");
+  });
+
+  /**
+   * An embedded room needs no vendor JavaScript on this origin — that is the
+   * difference between an iframe and an SDK, and it is why script-src does not
+   * have to move.
+   */
+  it("still allows no third-party script", () => {
+    const directives = policy(securityHeadersFor(EMBEDDED)["content-security-policy"]);
+
+    expect(directives).toContain("script-src 'self'");
+  });
+
+  /**
+   * Without this the frame loads and cannot hear anybody — a meeting room that
+   * works except for the part that is a meeting.
+   */
+  it("grants camera and microphone to the frame and not to this origin", () => {
+    const header = securityHeadersFor(EMBEDDED)["permissions-policy"]!;
+
+    expect(header).toContain('camera=("https://meet.example.test")');
+    expect(header).toContain('microphone=("https://meet.example.test")');
+    expect(header).not.toContain("camera=(self");
+  });
+
+  it("still refuses location and payment", () => {
+    const header = securityHeadersFor(EMBEDDED)["permissions-policy"]!;
+
+    expect(header).toContain("geolocation=()");
+    expect(header).toContain("payment=()");
+  });
+
+  it("changes nothing when no provider is embeddable", () => {
+    const directives = policy(
+      securityHeadersFor({ production: true })["content-security-policy"],
+    );
+
+    expect(directives).toContain("frame-src 'none'");
+    expect(securityHeadersFor({ production: true })["permissions-policy"]).toBe(
+      "camera=(), microphone=(), geolocation=(), payment=()",
+    );
+  });
+});
+
+describe("frameOriginOf", () => {
+  /**
+   * The origin, never the URL. A provider URL carries the room id, and which
+   * meeting is happening is not a thing to put in a response header — quite
+   * apart from a CSP source with a path being ignored or misread.
+   */
+  it("drops the path, the room and the query", () => {
+    expect(frameOriginOf("https://meet.example.test/room/abc123?jwt=x")).toBe(
+      "https://meet.example.test",
+    );
+  });
+
+  it("keeps a port", () => {
+    expect(frameOriginOf("https://meet.example.test:8443/x")).toBe(
+      "https://meet.example.test:8443",
+    );
+  });
+
+  /** A template still holding its placeholder is not a URL. */
+  it("refuses what is not a usable origin", () => {
+    expect(frameOriginOf(null)).toBeNull();
+    expect(frameOriginOf(undefined)).toBeNull();
+    expect(frameOriginOf("")).toBeNull();
+    expect(frameOriginOf("not a url")).toBeNull();
+    expect(frameOriginOf("javascript:alert(1)")).toBeNull();
+    expect(frameOriginOf("data:text/html,<script>")).toBeNull();
   });
 });

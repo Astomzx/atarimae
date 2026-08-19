@@ -14,7 +14,10 @@ import { createDatabase, type Database } from "./db.js";
 import { registerErrorHandler } from "./errors.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerRealtime } from "./plugins/realtime.js";
-import { registerSecurityHeaders } from "./plugins/security-headers.js";
+import {
+  refreshCallFrameOrigin,
+  registerSecurityHeaders,
+} from "./plugins/security-headers.js";
 import { AttachmentStore } from "./services/attachment-store.js";
 import { announcementCsvRoutes } from "./routes/announcement-csv.js";
 import { announcementRoutes } from "./routes/announcements.js";
@@ -56,6 +59,8 @@ declare module "fastify" {
     config: Config;
     db: Database;
     secrets: SecretStore;
+    /** Rebuilds the cached headers when the call provider changes. */
+    refreshSecurityHeaders(callFrameOrigin: string | null): void;
     attachments: AttachmentStore;
   }
 }
@@ -313,6 +318,11 @@ export async function buildApp({
       stopWorker();
     });
   }
+
+  // A provider marked embeddable has to reach the CSP before the first page
+  // is served, or the frame is refused until something else happens to write
+  // a provider.
+  await refreshCallFrameOrigin(app);
 
   app.addHook("onClose", async (instance) => {
     await instance.db.end();

@@ -15,26 +15,46 @@ contradict its own thesis. Two obvious features would do it:
   hour later stamps the wrong time, possibly against a revision that has since
   been superseded — a confirmation of something nobody confirmed.
 
-So the service worker caches the **shell** and nothing else. Everything
-carrying meaning goes to the network or does not happen.
+So the service worker caches the **shell**, plus one deliberate exception added
+in M6a and named below. Everything else carrying meaning goes to the network or
+does not happen.
 
-| Request                      | What the worker does                      |
-| ---------------------------- | ----------------------------------------- |
-| Navigation                   | Network first, cached shell as a fallback |
-| `/assets/*` (content-hashed) | Cache first — the name is the version     |
-| `/api/*`                     | **Never touched.** Not cached, not served |
-| Manifest, icons              | Network, cache as a fallback              |
-| Anything not GET             | **Never touched**                         |
+| Request                            | What the worker does                                    |
+| ---------------------------------- | ------------------------------------------------------- |
+| Navigation                         | Network first, cached shell as a fallback               |
+| `/assets/*` (content-hashed)       | Cache first — the name is the version                   |
+| `/api/v1/my/announcements[/id]`    | Network first, cached answer as a fallback, **stamped** |
+| `/api/v1/auth/me`, `/setup/status` | The same, because without them nothing renders at all   |
+| Any other `/api/*`                 | **Never touched.** Not cached, not served               |
+| Manifest, icons                    | Network, cache as a fallback                            |
+| Anything not GET                   | **Never touched**                                       |
 
-`/api` covers attachments, so no private file is written to a cache that
-outlives the session. That is asserted directly: a test walks every cache and
-fails if any entry's path starts with `/api/`.
+Network **first**, never cache first: a roster that changed this morning must
+not be served from yesterday because the cache was quicker. The cache is a
+fallback for having no network, not a performance trick.
+
+The exception is a list of exact patterns rather than a prefix. Attachments live
+under `/api` too, and a prefix match that let one through would write somebody's
+private file into a cache that outlives their session — on a shared PC in an
+office. That is asserted directly: a test walks every cache and fails on any
+entry outside the permitted set.
+
+The session-scoped honest limit that comes with it: offline, a session an
+administrator revoked still looks valid here. Nothing can be _done_ with it —
+acknowledging offline fails and has its own test — but yesterday's roster stays
+readable until the network returns. That is the trade this exception is.
 
 ## What actually happens offline
 
 The application opens — the shell and the hashed bundles are cached — and a
-banner says it is offline and that nothing can be sent. The announcement list
-is **empty rather than stale**, because there is nothing to serve it from.
+banner says it is offline and that nothing can be sent.
+
+The announcement list is the **one** thing served from a cache, and only on the
+terms set out above: every entry carries, on screen and unmissably, the time it
+was fetched. A driver in a basement saw nothing at all before;
+yesterday's roster stamped 取得 昨日 18:32 beats nothing, and the stamp is the
+whole of the argument, so an E2E test fails without it. Nothing else is cached,
+and acknowledging offline still does not happen.
 
 Pressing 確認しました offline does not record anything. The end-to-end test
 checks that against the database rather than the screen, because the screen is

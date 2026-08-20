@@ -2,26 +2,38 @@
 
 **当たり前のことが、当たり前にできる社内掲示板。**
 
-A free and self-hosted communication board for small teams.
+小さな会社が、自分のサーバーに置いて使う連絡掲示板です。無料、人数制限なし、
+オープンソース（AGPL-3.0）。公式クラウドはなく、営業担当に連絡する必要もありません。
+
+📖 **English: [README.en.md](README.en.md)**
 
 ---
 
-管理者が管理者を追加できる。
-同じアカウントを複数端末で利用できる。
-会社のデータを自分でエクスポートできる。
+## なぜ作ったか
 
-Atarimae は、このような基本的な機能を、基本的な機能として実装した無料の社内掲示板です。
+業務システムを使っていて、何度も同じところで詰まりました。
 
-- 完全無料・人数制限なし
-- セルフホスト型（データは自分のサーバーに）
-- オープンソース (AGPL-3.0)
-- 公式クラウドサービスなし・営業担当への連絡不要
+- 管理者なのに、管理者を追加できない
+- 同じアカウントで、事務所の PC と現場のスマートフォンの両方を使えない
+- 自分の会社が入力したデータを、自分で取り出せない
+
+どれも高度な機能ではありません。**当たり前のことです。**
+Atarimae は、その当たり前を当たり前に実装したらどうなるかを確かめるための
+プロジェクトです。
+
+だから、この掲示板では次のことが最初からできます。
+
+| できること                       | Atarimae での扱い                            |
+| -------------------------------- | -------------------------------------------- |
+| 管理者が管理者を追加する         | 権限画面から。申請も待ち時間もありません     |
+| 一つのアカウントを複数端末で使う | 同時ログイン可。端末ごとに自分で解除できます |
+| 会社のデータを自分で取り出す     | 確認結果の CSV、全体のバックアップ書庫       |
 
 ---
 
-## 何ができるか
+## できること
 
-### 全体の連絡と、一人ひとりへの指示を、1つの公告で
+### 全員への連絡と、一人ひとりへの指示を、一つの公告で
 
 ```
 明日の予定                          ← 全員に共通の本文
@@ -31,55 +43,107 @@ Atarimae は、このような基本的な機能を、基本的な機能とし�
 8:30 第一営業所集合、その後A区域を担当
 ```
 
-田中さんには田中さんの担当だけが表示され、佐藤さんには佐藤さんの分だけが表示されます。
-確認ボタンが記録するのは「共通の本文＋自分の担当」という、その人が実際に見た組み合わせです。
+田中さんには田中さんの担当だけが、佐藤さんには佐藤さんの分だけが表示されます。
+確認ボタンが記録するのは「共通の本文＋自分の担当」という、**その人が実際に見た
+組み合わせ**です。
 
-四十人分をひとつずつ入力するのは現実的ではないので、CSV での一括入力に対応しています。
-名簿をダウンロードし、Excel で担当欄を埋めて、そのまま戻せます。
+四十人分を一人ずつ入力するのは現実的ではないので、CSV での一括入力に対応して
+います。名簿をダウンロードし、Excel で担当欄を埋めて、そのまま戻せます。
 
 ### 確認状況が、説明できる数字であること
 
-確認率の分母は「現在有効な確認義務」です。現在の部署人数でも、宛先の人数でも、
+確認率の分母は「**現在有効な確認義務**」です。現在の部署人数でも、宛先の人数でも、
 配信対象の総数でもありません。だから次のことが成り立ちます。
 
-- 公開時点で対象者が確定するため、後から異動があっても過去の確認率は変わらない
+- 公開時点で対象者が確定するので、後から異動があっても過去の確認率は変わらない
 - 停止したメンバーは分母から外れる（ログインできない人がいる限り 100% にならない、を避ける）
 - ただし、その人が既に確認していれば、その記録は残り続ける
 - 確認済みの義務は、管理者でも免除できない
 
-「確認を依頼しました」と表示されて実際には誰にも届いていない、という状態が
-起きないように設計されています。対象者が 0 名の操作は成功ではなくエラーとして返します。
+**「確認を依頼しました」と表示されて実際には誰にも届いていない、が起きないように
+設計されています。** 対象者が 0 名の操作は、成功ではなく 422 と内訳を返します。
+これはこの製品の中心的な主張なので、どの機能にも同じ規則が適用されます。
 
-### そのほか
+そのほか、公告まわりでできること：
 
 - 部署・営業所・チーム単位、または個人単位での宛先指定
-- 確認期限と、期限24時間前のメール通知（送信は1回だけ）
-- 複数端末の同時ログインと、自分でのログアウト操作
-- 管理操作の監査ログ
+- 確認期限と、期限 24 時間前のメール通知（送信は一度だけ）
 - 確認結果の CSV エクスポート
+- 管理操作の監査ログ
+
+### チャットと通話
+
+**チャット。** チャンネル（公開・非公開）と一対一の会話、ファイル添付、メンション、
+未読とメンションの区別、WebSocket による即時反映。
+
+意図的に未実装のものがあります（v1.0 より後）：編集、削除、リアクション、リンク
+プレビュー、検索、スレッド、在席表示、入力中表示。**画面は実装済みの範囲と正確に
+一致しています** — 押せないボタンや、あとで動く予定の項目は置いていません。
+
+**通話。** 電話ではなく、LINE や WeChat と同じネットワーク通話です。一対一と
+グループの区別はありません（通話は会話に属し、会話は一対一かグループのどちらかで、
+仕組みは一つです）。
+
+音声・映像そのものは Atarimae では扱いません。運びません。**サーバー室にすでに
+ある Jitsi を指定すれば、通話は社内から出ません。** Atarimae が持つのは、誰を
+呼んでいるか、いつ始まったか、誰が応答したか、そして終わったあとの記録です。
+会議室画面は別ウィンドウで開き、管理者が明示的に許可したときだけアプリ内に
+埋め込みます。
+
+### スマートフォン、PC、そして電波の届かない場所
+
+**画面の幅で機能は変わりません。** スマートフォン専用の機能も、PC 専用の機能も
+ありません。E2E テストは両方の幅で同じシナリオを実行します。
+
+- **PWA** — インストールできます。通知（Web Push）に対応します。
+- **オフライン** — 自分宛てのお知らせは、電波がなくても読めます。ただし
+  **取得した時刻が画面に必ず表示されます**。基地局のない地下で昨日の指示を
+  今日のものだと思って読むことを避けるための条件で、これがないと E2E テストが
+  失敗します。オフラインでの確認操作は記録されません（できないことは、できないと
+  表示されます）。
+- **Windows デスクトップ版** — タスクバーに入る窓です。中身はサーバーが配信する
+  同じ Web アプリで、Windows だけの機能はありません。接続先は起動時に尋ね、
+  応答しないアドレスは保存を拒否します。
+
+### つなぐ
+
+- **OpenAPI 3.1** — 仕様は `apps/server/openapi.json` に生成物としてコミットされ、
+  ずれると CI が落ちます。開発時は `/docs` で閲覧できます。
+- **サービスアカウント** — 連携用のアカウントは「担当者のトークン」ではありません。
+  人とは別の種類として存在し、オーナー権限は付与できません。
+- **Webhook** — 送信はアウトボックス方式で、再試行され、本文と時刻をまとめて
+  署名します。社内アドレスへは送れません（通話プロバイダとは規則が違います。
+  理由は `docs/architecture/webhooks.md`）。
+
+### 運用
+
+- **バックアップ** — データベースと添付ファイルを一つの書庫に。書き込む前に
+  検証し、`pnpm backup:verify` は書庫を読むだけで何も変更しません。復元は復元後に
+  一致を証明します。
+- **書庫の暗号化（任意）** — `age` に委ねます。**このプロジェクトは鍵を作らず、
+  持ちません。** すでに管理している公開鍵に対して暗号化します。
+- **セキュリティ** — Argon2id のパスワード、外部資格情報は AES-256-GCM、
+  サインインのレート制限、管理操作の監査ログ、そして厳格な CSP。
+  なかでも `frame-ancestors 'none'` は、この製品にとって最も重要な一行です
+  （確認ボタンが透明な層に覆われたら、記録は正しいまま主張だけが嘘になります）。
 
 ---
 
-## 開発状況
+## 画面
 
-| マイルストーン | 内容                                     | 状態     |
-| -------------- | ---------------------------------------- | -------- |
-| M0             | 開発基盤、CI、マイグレーション、E2E      | 完了     |
-| M1             | アカウント・組織・権限                   | 完了     |
-| **M2**         | 公告・個人別内容・確認・通知             | **完了** |
-| **M3a**        | 基本チャット・ファイル添付               | **完了** |
-| **M4**         | PWA・Windows クライアント                | **完了** |
-| **M5**         | 公開 API・Webhook・通話 Provider         | **完了** |
-| M6a / M6b      | セキュリティ・ドキュメント・正式リリース | 一部完了 |
-
-受け入れシナリオはすべて自動テスト化されています
-（[M1](e2e/tests/m1-acceptance.spec.ts)、[M2](e2e/tests/m2-ui.spec.ts)、
-[M3a](e2e/tests/m3a-ui.spec.ts)、[M4](e2e/tests/m4-pwa.spec.ts)、[M5](e2e/tests/m5-ui.spec.ts)）。
-PC とスマートフォンの両方の画面幅で同じシナリオを実行しています。
+**準備中です。** 動く証拠としては、いまのところ受け入れシナリオの E2E テストが
+その役割を果たしています（[M1](e2e/tests/m1-acceptance.spec.ts)、
+[M2](e2e/tests/m2-ui.spec.ts)、[M3a](e2e/tests/m3a-ui.spec.ts)、
+[M4](e2e/tests/m4-pwa.spec.ts)、[M5](e2e/tests/m5-ui.spec.ts)、
+[通話](e2e/tests/m5-calls.spec.ts)）。PC とスマートフォンの両方の幅で
+同じシナリオを実行しています。
 
 ---
 
-## Deploying
+## 導入
+
+必要なもの：Docker と、TLS を前段に置ける環境（本番ではセッション Cookie が
+`Secure` なので、TLS なしではサインインできません）。
 
 ```bash
 git clone https://github.com/Astomzx/atarimae.git
@@ -89,7 +153,7 @@ git clone https://github.com/Astomzx/atarimae.git
 node scripts/setup-env.mjs
 ```
 
-Set `PUBLIC_ORIGIN` in the generated `.env`, then:
+生成された `.env` の `PUBLIC_ORIGIN` を設定してから：
 
 ```bash
 docker compose up -d
@@ -99,27 +163,30 @@ docker compose up -d
 docker compose exec app node scripts/db.mjs up
 ```
 
-Open the address and create the first Owner — there is no activation step and
-nobody to contact.
+アドレスを開き、最初のオーナーを作成します。**有効化手続きも、連絡先もありません。**
 
-Full instructions, including TLS, SMTP, backups and updating:
+TLS、SMTP、バックアップ、更新を含む詳しい手順：
 **[docs/deployment/docker.md](docs/deployment/docker.md)**
 
-> **Back up `ENCRYPTION_KEY_CURRENT` separately from your database dumps.**
-> Losing it permanently destroys every stored external credential.
+> **`ENCRYPTION_KEY_CURRENT` は、データベースのダンプとは別に保管してください。**
+> 失うと、保存済みの外部資格情報がすべて失われます。
+
+> **リバースプロキシの内側に置くなら `TRUSTED_PROXY_IPS` を設定してください。**
+> 設定しないと、事務所全員が一つのレート制限枠を共有することになります。
 
 ---
 
-## Development
+## 開発
 
-| Tool       | Version              | Why                                            |
-| ---------- | -------------------- | ---------------------------------------------- |
-| Node.js    | 22+ (24 recommended) | `process.loadEnvFile`                          |
-| pnpm       | 10+                  | workspace management                           |
-| PostgreSQL | **18+**              | `uuidv7()` and the builtin `C.UTF-8` collation |
+| 道具       | 版               | 理由                                           |
+| ---------- | ---------------- | ---------------------------------------------- |
+| Node.js    | 22+（24 を推奨） | `process.loadEnvFile`                          |
+| pnpm       | 10+              | ワークスペース管理                             |
+| PostgreSQL | **18+**          | `uuidv7()` と組み込みの `C.UTF-8` コレーション |
 
-PostgreSQL 18 is a hard floor, not a preference — see
-[docs/architecture/decisions.md](docs/architecture/decisions.md).
+PostgreSQL 18 は好みではなく下限です。コレーションは正しさの要件で、libc の
+コレーションは Windows の開発機と Linux コンテナで異なり、ORDER BY と一意索引の
+挙動が黙って変わります。→ [docs/architecture/decisions.md](docs/architecture/decisions.md)
 
 ```bash
 pnpm install
@@ -137,112 +204,171 @@ pnpm db:reset
 pnpm dev
 ```
 
-- Web client: http://localhost:5173
+- Web: http://localhost:5173
 - API: http://localhost:3000/api/v1
-- API docs (development only): http://localhost:3000/docs
+- API ドキュメント（開発時のみ）: http://localhost:3000/docs
 
-### Checks
+### 検査
 
 ```bash
 pnpm check
 ```
 
-Builds, then runs format check, lint, typecheck and unit tests — the same gates
-as CI, in the same order.
+ビルドしてから、書式・lint・型・単体テストを CI と同じ順で実行します。
 
 ```bash
 pnpm test:e2e
 ```
 
-Playwright, at desktop and phone widths, against the test database. Browsers
-need installing once:
+Playwright を PC とスマートフォンの幅で。ブラウザーの導入は一度だけ必要です：
 
 ```bash
 pnpm --filter @atarimae/e2e install-browsers
 ```
 
-### Database
+この二つは**同時に実行できます**。単体テスト用と E2E 用でデータベースが分かれて
+いて、その名前はチェックアウトごとに導出されます（設定項目ではありません）。理由と、
+そうでなかった頃に何が起きたかは
+[docs/engineering/shared-test-database.md](docs/engineering/shared-test-database.md)。
 
-Migrations are plain SQL with both directions mandatory. `pnpm db:verify` runs
-`up → down → up` and fails if any migration cannot be rolled back.
+### データベース
 
-| Command              | What it does                                  |
-| -------------------- | --------------------------------------------- |
-| `pnpm db:new <name>` | Scaffold a migration, both directions stubbed |
-| `pnpm db:up`         | Apply pending migrations                      |
-| `pnpm db:down`       | Roll back the most recent one                 |
-| `pnpm db:status`     | Show applied and pending                      |
-| `pnpm db:reset`      | Drop, recreate and migrate the dev database   |
-| `pnpm db:verify`     | Prove every migration is reversible           |
+マイグレーションは素の SQL で、上りと下りの両方が必須です。`pnpm db:verify` は
+`up → down → up` を実行し、戻せないマイグレーションがあれば失敗します。
 
-Append `--test` to target the test database.
+| コマンド             | 内容                                       |
+| -------------------- | ------------------------------------------ |
+| `pnpm db:new <名前>` | マイグレーションの雛形（上り・下り）       |
+| `pnpm db:up`         | 未適用のマイグレーションを適用             |
+| `pnpm db:down`       | 直近のマイグレーションを取り消す           |
+| `pnpm db:status`     | 適用済みと未適用の一覧                     |
+| `pnpm db:reset`      | 開発用データベースを作り直して適用         |
+| `pnpm db:verify`     | すべてのマイグレーションが戻せることを証明 |
+
+`--test` でテスト用データベースを対象にします（`--e2e` で E2E 用のみ）。
+
+### バックアップ
+
+```bash
+pnpm backup                       # データベース＋添付を一つの書庫に
+pnpm backup:verify <ファイル>     # 書庫を読むだけ。何も変更しない
+pnpm restore <ファイル> [--force] # 復元し、一致することを証明する
+```
 
 ---
 
-## Layout
+## 構成
 
 ```text
 atarimae/
 ├─ apps/
-│  ├─ server/          Fastify + TypeBox, REST + OpenAPI 3.1
-│  └─ web/             React + Vite + TanStack Query
+│  ├─ server/          Fastify 5 + TypeBox、REST + OpenAPI 3.1、WebSocket
+│  ├─ web/             React 19 + Vite 6 + TanStack Query
+│  └─ desktop/         Tauri（Rust）。pnpm ワークスペース外
 ├─ packages/
-│  ├─ api-schema/      TypeBox schemas — the single source of truth
-│  └─ secret-store/    AES-256-GCM for external credentials
-├─ migrations/         Plain SQL, up and down
+│  ├─ api-schema/      TypeBox スキーマ — 型の唯一の出どころ
+│  ├─ secret-store/    AES-256-GCM。外部に渡す資格情報だけに使う
+│  └─ backup/          書庫の形式と、backup / verify / restore
+├─ migrations/         素の SQL、上りと下り
 ├─ e2e/                Playwright
 └─ docs/
-   ├─ architecture/    Frozen data model, technical decisions
+   ├─ architecture/    凍結されたデータモデル、技術上の決定
    ├─ deployment/      Docker
-   └─ engineering/     Defects found while building, and their guards
+   └─ engineering/     作る過程で見つけた不具合と、その番人
 ```
 
-Request and response types are defined once in `packages/api-schema` and reused
-by Fastify for validation, by `@fastify/swagger` for the OpenAPI document, and
-by the web client for its types. `apps/server/openapi.json` is committed and CI
-fails when it drifts.
+要求と応答の型は `packages/api-schema` に一度だけ定義し、Fastify の検証、
+`@fastify/swagger` の OpenAPI 文書、Web クライアントの型がそれを共有します。
 
-The announcement data model is **frozen** and documented in
-[docs/architecture/announcement-model.md](docs/architecture/announcement-model.md).
-It explains not only what the tables are, but which failures each constraint
-exists to make impossible.
+公告のデータモデルは**凍結**されていて、
+[docs/architecture/announcement-model.md](docs/architecture/announcement-model.md)
+に記録されています。テーブルが何かだけでなく、**どの制約がどの失敗を不可能に
+しているか**が書かれています。
 
 ---
 
-## Security
+## 開発状況
 
-Report vulnerabilities privately: **[SECURITY.md](SECURITY.md)**. It also states
-plainly what the design already assumes, so no one wastes time reporting a
-deliberate decision.
+| マイルストーン | 内容                                   | 状態       |
+| -------------- | -------------------------------------- | ---------- |
+| M0             | 開発基盤、CI、マイグレーション、E2E    | 完了       |
+| M1             | アカウント・組織・権限                 | 完了       |
+| M2             | 公告・個人別内容・確認・通知・CSV      | 完了       |
+| M3a            | チャット・ファイル添付                 | 完了       |
+| M4             | PWA・通知・Windows クライアント        | 完了       |
+| M5             | 公開 API・Webhook・通話                | 完了       |
+| M6a            | セキュリティ・添付・バックアップ／復元 | 完了       |
+| **M6b**        | ドキュメント・画面写真・正式リリース   | **進行中** |
+
+496 のサーバー単体テスト、74 の Web 単体テスト、47 のバックアップ、
+20 の secret-store、18 のデスクトップ（Rust）、154 の E2E、11 のマイグレーション。
+CI は緑です。
+
+**この数を書いているのは、この製品の価値が「検証できること」だからです。**
+コメントでしか守られていない規則は、守られていません。
 
 ---
 
-## License
+## 読みどころ
 
-[AGPL-3.0-only](LICENSE).
+コードより先にこちらを読んだほうが早いかもしれません。
 
-You may use, modify and self-host this freely. If you run a modified version as
-a network service, that version's source must be made available to its users.
+| ドキュメント                                                        | 何が書いてあるか                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------ |
+| [announcement-model.md](docs/architecture/announcement-model.md)    | 確認統計が信用できる理由を、制約ごとに           |
+| [security.md](docs/architecture/security.md)                        | よりによってクリックジャッキングが本命である理由 |
+| [calls.md](docs/architecture/calls.md)                              | Atarimae が運ぶことを拒むもの、そしてその代償    |
+| [attachments.md](docs/architecture/attachments.md)                  | 四つの検査規則と、それぞれが塞ぐ穴               |
+| [backup.md](docs/architecture/backup.md)                            | 鍵を書庫に入れない理由                           |
+| [pwa.md](docs/architecture/pwa.md)                                  | オフライン対応が自分の主張を壊しかける場所       |
+| [reconsidering.md](docs/architecture/reconsidering.md)              | 断った六つの判断を、あとから検証し直した記録     |
+| [m0-regressions.md](docs/engineering/m0-regressions.md)             | 11 個の実際の不具合と、それぞれの番人            |
+| [shared-test-database.md](docs/engineering/shared-test-database.md) | 測定装置のほうが壊れていたと気づくまでの時間     |
 
-This is deliberate: it keeps anyone from taking this, closing it, and charging
-per employee for it.
+`reconsidering.md` は特に、この製品の作り方そのものです。断った理由を検証できる
+形で書き残しておくと、あとで誰かがその誤りを見つけられます。六つのうち四つは、
+そうやって覆りました。
 
-Known cost: some companies' legal departments refuse AGPL outright, so adoption
-will be lower than under MIT. That trade is accepted.
+---
 
-## Project status and support
+## セキュリティ
 
-本プロジェクトは個人が作品および技術検証を目的として維持しています。
+脆弱性の報告は**非公開で**お願いします → **[SECURITY.md](SECURITY.md)**
+
+設計上すでに前提としていることも書いてあります。意図的な判断を報告するために
+時間を使わずに済むように。
+
+---
+
+## ライセンス
+
+[AGPL-3.0-only](LICENSE)
+
+自由に使い、改変し、自分で運用できます。改変した版をネットワークサービスとして
+提供する場合は、その版のソースを利用者に提供する必要があります。
+
+これは意図的です。誰かがこれを取り込み、閉じ、社員一人あたりいくらで課金する、
+ということを防ぐためです。
+
+**分かっている代償：** AGPL を一律で断る法務部門もあるので、MIT より採用は
+少なくなります。その取引は受け入れています。
+
+---
+
+## 方針とサポート
+
+本プロジェクトは個人が、作品および技術検証を目的として維持しています。
 
 - 公式ホスティングサービスは提供しません
 - SLA はありません
 - 更新頻度は約束しません
 - 電話・訪問・個別の無償導入支援は行いません
 
-企業利用者は、デプロイ・バックアップ・セキュリティ設定・運用を自己責任で行ってください。
+企業利用者は、デプロイ・バックアップ・セキュリティ設定・運用を自己責任で行って
+ください。
 
 Issue は歓迎します。再現手順のあるバグ、セキュリティ問題、ドキュメントの改善、
-汎用的な機能提案について。特定企業向けのカスタマイズ、無償の導入代行、
-修正期日の確約には対応できません。
+汎用的な機能提案について。特定企業向けのカスタマイズ、無償の導入代行、修正期日の
+確約には対応できません。
 
 **PRs are welcome.**

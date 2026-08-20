@@ -103,14 +103,19 @@ twice inside one response breaks Fastify's serializer.
 | M4 PWA + Tauri                                                   | done        |
 | M5 open API, webhooks, 通話 providers                            | done        |
 | M6a security, attachments, backup/restore                        | done        |
-| M6b documentation, screenshots, release                          | not started |
+| M6b documentation, screenshots, release                          | in progress |
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
 18 desktop (Rust), 154 E2E, 11 migrations. CI green.
 
 ## Suggested order from here
 
-1. **M6b** — three-language README, screenshots, demo video, release.
+1. **M6b** — screenshots, demo video, release. The README is done:
+   `README.md` is Japanese and primary, `README.en.md` is the full English
+   version, and they link to each other. **Two languages, not three** — the
+   author's standing instruction is that repository documentation is Japanese
+   and English. Keep the pair in step; if they ever disagree, the Japanese one
+   is the one the author reads and therefore the one that is right.
 
 M6a is done. `docs/architecture/security.md` is what was defended and what was
 not; `docs/engineering/m6a-security.md` is what the pass found.
@@ -217,7 +222,10 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   ambiguous, and the composer refuses rather than guessing.
 - **Screenshots and the demo video need the author.** The browser pane here
   cannot take screenshots. `e2e/tests/m2-ui.spec.ts` is the shot list —
-  Playwright can record video by setting `video: "on"` in the config.
+  Playwright can record video by setting `video: "on"` in the config. Both
+  READMEs have a 画面 / Screenshots section that says plainly that there are
+  none yet and points at the acceptance specs instead; that section is where
+  the images go.
 - **The repository is private.** The plan is to make it public after M2, which
   is now done; the timing is the author's call.
 

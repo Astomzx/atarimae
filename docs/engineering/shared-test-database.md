@@ -172,6 +172,34 @@ Measured rather than reasoned about: `pnpm --filter @atarimae/server test` and
 `pnpm test:e2e` started together, in one checkout, both green — 496 and 154.
 That pair is what used to destroy a run.
 
+### Considered and not taken: a lock per suite
+
+There was a second design for this, written on a branch that solved the same
+problem the other way round, and one part of it was not brought over. Recorded
+here because "we did not do this" is only useful if the reason travels with it.
+
+Each suite would take a **PostgreSQL advisory lock on its own database**, so a
+second run of that suite refuses to start and says which connection is holding
+it. Held by a connection rather than a file, so a run killed with Ctrl-C leaves
+nothing to clean up.
+
+Not taken, because splitting the databases already covers the failure that
+actually happened: `pnpm check` beside `pnpm test:e2e` in two terminals. What
+the lock adds is protection against **two runs of the _same_ suite** in one
+checkout — rarer, self-inflicted, and not something that has yet cost anybody an
+afternoon here. The cost side is real too: a lock that outlives a crashed run,
+or one held by a process somebody forgot about, is a suite that will not start
+for a reason unrelated to the code.
+
+If it is ever wanted, it was `e2e/fixtures/exclusive-run.ts` and
+`apps/server/src/test/global-setup.ts` on `claude/zen-merkle-991a84`, at
+`a0929bb` — a branch since deleted, so that commit is the only address it has.
+
+**The thing to keep, whatever is decided later:** the reason a second run is
+dangerous at all is that both suites truncate. That is not going to change, so
+if this project ever grows a third suite that empties tables, it needs its own
+database on the same derivation and not a lock bolted on afterwards.
+
 ## The product defect underneath all of it
 
 Not a test-harness bug at all, and the most serious thing here.

@@ -21,8 +21,12 @@ import {
  * — 25 failures across four unrelated areas, then a clean run a minute later.
  */
 
-const ROOT = "F:/Claude/Atarimae";
-const WORKTREE = "F:/Claude/Atarimae/.claude/worktrees/zen-merkle-991a84";
+/*
+ * Fixture paths, not anybody's actual checkout. The derivation only ever sees a
+ * string, and a repository does not carry the machine it was written on.
+ */
+const ROOT = "D:/work/atarimae";
+const WORKTREE = "D:/work/atarimae/.claude/worktrees/zen-merkle-991a84";
 const BASE = "postgresql://atarimae:secret@localhost:5432/atarimae_test";
 
 describe("testDatabaseUrlFor", () => {
@@ -37,20 +41,20 @@ describe("testDatabaseUrlFor", () => {
 
   /** Windows hands back either case for the same directory. */
   it("does not treat a change of case as a different checkout", () => {
-    expect(testDatabaseUrlFor(BASE, "F:/Claude/Atarimae")).toBe(
-      testDatabaseUrlFor(BASE, "f:/claude/atarimae"),
+    expect(testDatabaseUrlFor(BASE, "D:/work/atarimae")).toBe(
+      testDatabaseUrlFor(BASE, "d:/WORK/Atarimae"),
     );
   });
 
   it("does not treat a backslash path as a different checkout", () => {
-    expect(testDatabaseUrlFor(BASE, "F:\\Claude\\Atarimae")).toBe(
-      testDatabaseUrlFor(BASE, "F:/Claude/Atarimae"),
+    expect(testDatabaseUrlFor(BASE, "D:\\work\\atarimae")).toBe(
+      testDatabaseUrlFor(BASE, "D:/work/atarimae"),
     );
   });
 
   it("ignores a trailing separator", () => {
-    expect(testDatabaseUrlFor(BASE, "F:/Claude/Atarimae/")).toBe(
-      testDatabaseUrlFor(BASE, "F:/Claude/Atarimae"),
+    expect(testDatabaseUrlFor(BASE, "D:/work/atarimae/")).toBe(
+      testDatabaseUrlFor(BASE, "D:/work/atarimae"),
     );
   });
 
@@ -185,8 +189,8 @@ describe("checkoutPortOffset", () => {
   });
 
   it("agrees with the database on what counts as the same checkout", () => {
-    expect(checkoutPortOffset("F:\\Claude\\Atarimae")).toBe(
-      checkoutPortOffset("f:/claude/atarimae/"),
+    expect(checkoutPortOffset("D:\\work\\atarimae")).toBe(
+      checkoutPortOffset("d:/WORK/Atarimae/"),
     );
   });
 

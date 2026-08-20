@@ -47,8 +47,8 @@ const MAX_LABEL_CHARS = 20;
  * The checkout's path, in a form that hashes the same every time.
  *
  * `realpath` because a worktree may be reached through a symlink or a
- * mapped drive, and lower case because Windows will hand back `F:\Claude` one
- * day and `f:\claude` the next for the same directory. Either would produce a
+ * mapped drive, and lower case because Windows will hand back `D:\Work` one
+ * day and `d:\work` the next for the same directory. Either would produce a
  * second database for a checkout that already had one — not dangerous, but it
  * would quietly undo the "one per checkout" property this file exists for.
  */

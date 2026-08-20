@@ -94,28 +94,40 @@ twice inside one response breaks Fastify's serializer.
 
 ## Status
 
-| Milestone                                                        | State       |
-| ---------------------------------------------------------------- | ----------- |
-| M0 foundation                                                    | done        |
-| M1 accounts, org units, permissions                              | done        |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done        |
-| M3a chat                                                         | done        |
-| M4 PWA + Tauri                                                   | done        |
-| M5 open API, webhooks, 通話 providers                            | done        |
-| M6a security, attachments, backup/restore                        | done        |
-| M6b documentation, screenshots, release                          | in progress |
+| Milestone                                                        | State |
+| ---------------------------------------------------------------- | ----- |
+| M0 foundation                                                    | done  |
+| M1 accounts, org units, permissions                              | done  |
+| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done  |
+| M3a chat                                                         | done  |
+| M4 PWA + Tauri                                                   | done  |
+| M5 open API, webhooks, 通話 providers                            | done  |
+| M6a security, attachments, backup/restore                        | done  |
+| M6b documentation, release (0.0.1)                               | done  |
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
 18 desktop (Rust), 158 E2E, 11 migrations. CI green.
 
 ## Suggested order from here
 
-1. **M6b** — screenshots, demo video, release. The README is done:
-   `README.md` is Japanese and primary, `README.en.md` is the full English
-   version, and they link to each other. **Two languages, not three** — the
-   author's standing instruction is that repository documentation is Japanese
-   and English. Keep the pair in step; if they ever disagree, the Japanese one
-   is the one the author reads and therefore the one that is right.
+**0.0.1 is out, and the repository is public.** M6b closed with the
+documentation and the release; screenshots and the demo video were deliberately
+deferred rather than blocking it, and they are the first thing to add.
+
+The README is done: `README.md` is Japanese and primary, `README.en.md` is the
+full English version, and they link to each other. **Two languages, not three**
+— the author's standing instruction is that repository documentation is Japanese
+and English. Keep the pair in step; if they ever disagree, the Japanese one is
+the one the author reads and therefore the one that is right.
+
+What is left, in no particular order:
+
+1. **Screenshots and the demo video** — the 画面 / Screenshots section in both
+   READMEs is where they go.
+2. **M3b chat** — editing, deletion, reactions, search, threads. All
+   deliberately out of scope until after v1.0.
+3. The two items still standing in `reconsidering.md`, each with a smaller
+   honest alternative already written down.
 
 M6a is done. `docs/architecture/security.md` is what was defended and what was
 not; `docs/engineering/m6a-security.md` is what the pass found.

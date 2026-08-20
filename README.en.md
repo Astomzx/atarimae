@@ -300,16 +300,19 @@ exists to make impossible.
 
 ## Status
 
-| Milestone |                                              | State           |
-| --------- | -------------------------------------------- | --------------- |
-| M0        | Foundation, CI, migrations, E2E              | done            |
-| M1        | Accounts, org units, permissions             | done            |
-| M2        | Announcements, per-person content, SMTP, CSV | done            |
-| M3a       | Chat and attachments                         | done            |
-| M4        | PWA, push, Windows client                    | done            |
-| M5        | Open API, webhooks, calls                    | done            |
-| M6a       | Security, attachments, backup and restore    | done            |
-| **M6b**   | Documentation, screenshots, release          | **in progress** |
+| Milestone |                                              | State     |
+| --------- | -------------------------------------------- | --------- |
+| M0        | Foundation, CI, migrations, E2E              | done      |
+| M1        | Accounts, org units, permissions             | done      |
+| M2        | Announcements, per-person content, SMTP, CSV | done      |
+| M3a       | Chat and attachments                         | done      |
+| M4        | PWA, push, Windows client                    | done      |
+| M5        | Open API, webhooks, calls                    | done      |
+| M6a       | Security, attachments, backup and restore    | done      |
+| **M6b**   | Documentation and release                    | **0.0.1** |
+
+Screenshots and the demo video are not here yet. They were not made a reason to
+hold the release.
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store, 18 desktop
 (Rust), 158 E2E, 11 migrations. CI is green.

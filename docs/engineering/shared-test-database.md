@@ -143,7 +143,22 @@ at the top of `checkout.mjs`: a `.env` that has to gain a line is a `.env` some
 checkout will not have. `pnpm db:test:reset` prepares both, because a half-
 prepared pair is how one suite ends up on the other's tables again.
 
-Two guards came with it:
+And one more thing decides by port and nothing else: `reuseExistingServer`. A
+server left running by an earlier session is adopted whatever environment it was
+started with — including one started _before_ the E2E database existed, which is
+pointed at the unit tests' database. The port offset makes another checkout's
+server unlikely to be there; it does nothing about this checkout's own.
+
+So the Playwright global setup now asks each server a health question through
+the chain the specs use — browser port, Vite proxy, Fastify, PostgreSQL — and
+then looks in this suite's database for the connection that question must have
+made. A server pointed anywhere else leaves no trace there and the run stops
+before the first test, naming the cause. It does not prove the server is on the
+right commit or has the right attachment directory; it proves the one thing that
+has actually gone wrong. Verified by pointing the setup at the wrong database on
+purpose and watching the run refuse to start.
+
+Two more guards came with it:
 
 - `db:reset` **refuses to drop a database something is connected to**, naming
   the connections rather than counting them. It used to terminate every session

@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { checkoutPortOffset, testDatabaseUrlFor } from "../scripts/checkout.mjs";
+import { testDatabaseUrlFor } from "../scripts/checkout.mjs";
+
+import { API_PORT, PREVIEW_PORT, WEB_PORT } from "./fixtures/ports.js";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const ENV_FILE = join(ROOT, ".env");
@@ -37,22 +39,6 @@ if (!configuredTestUrl) {
  */
 const testDatabaseUrl = testDatabaseUrlFor(configuredTestUrl, ROOT, "e2e");
 
-/**
- * Ports are per checkout too, and this is the more dangerous half.
- *
- * `reuseExistingServer` is on outside CI, which is what makes a second checkout
- * silent rather than merely broken: it does not fail on a port already in use,
- * it attaches to the *first* checkout's API server, runs against that tree's
- * code and that tree's database, and reports a result about a repository it
- * never read. A green run that proves nothing about your changes is worse than
- * a red one.
- */
-const PORT_OFFSET = checkoutPortOffset(ROOT);
-
-const WEB_PORT = 5273 + PORT_OFFSET;
-const API_PORT = 3100 + PORT_OFFSET;
-/** `vite preview`, serving the production build the PWA spec needs. */
-const PREVIEW_PORT = 5373 + PORT_OFFSET;
 const isCI = !!process.env["CI"];
 
 export default defineConfig({
@@ -61,6 +47,18 @@ export default defineConfig({
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
   workers: 1,
+
+  /**
+   * Checks that the servers on these ports are serving *this* suite's database,
+   * which `reuseExistingServer` below does not.
+   *
+   * It decides by port and nothing else, so a server left running by an earlier
+   * session is adopted whatever environment it was started with — including one
+   * started before this suite had a database of its own, which now points at the
+   * unit tests' one. Then every spec truncates one database while the browser
+   * reads another, and the run fails somewhere that has nothing to do with it.
+   */
+  globalSetup: "./fixtures/global-setup.ts",
 
   // Artifacts here double as promotional material: the acceptance scenario is
   // also the demo recording. See docs/architecture for the M1/M2 script.

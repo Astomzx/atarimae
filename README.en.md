@@ -312,7 +312,7 @@ exists to make impossible.
 | **M6b**   | Documentation, screenshots, release          | **in progress** |
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store, 18 desktop
-(Rust), 154 E2E, 11 migrations. CI is green.
+(Rust), 158 E2E, 11 migrations. CI is green.
 
 **The counts are here because this product's value is that its claims are
 checkable.** A rule enforced only by a comment is not enforced.

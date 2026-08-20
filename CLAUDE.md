@@ -106,7 +106,7 @@ twice inside one response breaks Fastify's serializer.
 | M6b documentation, screenshots, release                          | in progress |
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
-18 desktop (Rust), 154 E2E, 11 migrations. CI green.
+18 desktop (Rust), 158 E2E, 11 migrations. CI green.
 
 ## Suggested order from here
 
@@ -175,7 +175,10 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   `e2e/fixtures/database.ts` — and the fourth was missed first time round,
   which cost 122 skipped E2E tests. Add a fifth at your peril; there are tests.
   `pnpm db:test:reset` prepares both databases; `--e2e` targets just the
-  Playwright one. See `docs/engineering/shared-test-database.md`.
+  Playwright one. And because `reuseExistingServer` decides by port and nothing
+  else, `e2e/fixtures/global-setup.ts` makes a reused server prove which
+  database it is on before the first test runs. See
+  `docs/engineering/shared-test-database.md`.
 - **The Docker image builds and runs.** No longer a gap: Docker is installed
   here now, `docker compose up -d --build` works from a clean checkout, both
   containers reach healthy, all migrations apply inside the container and the

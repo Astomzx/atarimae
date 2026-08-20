@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
  * database the server was using. 122 tests did not run and none of the errors
  * mentioned a database.
  */
-function connectionString(): string {
+export function connectionString(): string {
   const configured = process.env["TEST_DATABASE_URL"];
   if (!configured) throw new Error("TEST_DATABASE_URL is not set");
   // "e2e" as well as the checkout: this suite has its own database so that it

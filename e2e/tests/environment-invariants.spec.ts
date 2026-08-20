@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "@playwright/test";
 
+import { connectionString } from "../fixtures/database.js";
+import { PREVIEW_PORT, WEB_PORT } from "../fixtures/ports.js";
+import { assertServersUseDatabase } from "../fixtures/server-identity.js";
+
 /**
  * Regression guards for environment-level failures found during M0.
  *
@@ -58,4 +62,55 @@ test.describe("environment invariants", () => {
     expect(script).toContain("writeFileSync");
     expect(script).toContain('encoding: "utf8"');
   });
+
+  /**
+   * `reuseExistingServer` adopts whatever is on the port, whatever environment
+   * it was started with. A server left over from an earlier session serves a
+   * different database to the same browser, and the specs then truncate one
+   * while the browser reads the other.
+   *
+   * The per-checkout port offset makes another *checkout's* server unlikely to
+   * be there. It does nothing about this checkout's own server started before
+   * the E2E database existed, which is pointed at the unit tests' database.
+   */
+  const probeUrls = [
+    `http://127.0.0.1:${String(WEB_PORT)}/api/v1/health`,
+    `http://127.0.0.1:${String(PREVIEW_PORT)}/api/v1/health`,
+  ];
+
+  test("the servers on these ports are serving this suite's database", async () => {
+    const url = connectionString();
+
+    // For real, through the same chain the specs use — browser port, Vite
+    // proxy, Fastify, PostgreSQL. The global setup already made this check;
+    // asserting it here is what fails visibly if the wiring is ever removed
+    // from playwright.config.ts.
+    await expect(
+      assertServersUseDatabase({
+        connectionString: url,
+        databaseName: databaseNameOf(url),
+        probeUrls,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  test("a server on the right port but the wrong database is refused", async () => {
+    const url = connectionString();
+
+    // The servers answer — that half is real — but nothing of theirs is
+    // connected here. That is exactly what a leftover looks like, and it has to
+    // stop the run rather than be adopted.
+    await expect(
+      assertServersUseDatabase({
+        connectionString: url,
+        databaseName: databaseNameOf(url),
+        probeUrls,
+        countServerConnections: () => Promise.resolve(0),
+      }),
+    ).rejects.toThrow(/is not using atarimae_test_e2e/);
+  });
 });
+
+function databaseNameOf(url: string): string {
+  return decodeURIComponent(new URL(url).pathname.replace(/^\//, ""));
+}

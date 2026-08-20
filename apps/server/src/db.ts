@@ -19,14 +19,51 @@ pg.types.setTypeParser(TIMESTAMP_OID, (value) => value);
 const INT8_OID = 20;
 pg.types.setTypeParser(INT8_OID, (value) => BigInt(value));
 
-export function createDatabase(config: Config): Database {
-  return new pg.Pool({
+export interface DatabaseOptions {
+  /**
+   * Called when a connection sitting idle in the pool fails. Defaults to
+   * writing to stderr, so a pool built outside Fastify is still not a way to
+   * kill the process.
+   */
+  onIdleError?: (error: Error) => void;
+}
+
+export function createDatabase(config: Config, options: DatabaseOptions = {}): Database {
+  const pool = new pg.Pool({
     connectionString: config.DATABASE_URL,
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
     application_name: "atarimae",
   });
+
+  /**
+   * Without this listener the server dies whenever PostgreSQL closes a
+   * connection.
+   *
+   * A pooled connection that is idle — checked in, not running a query — has no
+   * caller to reject, so `pg` reports its failure by emitting `error` on the
+   * pool. `error` is Node's one special event: unhandled, it is rethrown as an
+   * uncaught exception and takes the process with it. Every ordinary reason
+   * PostgreSQL ends a connection therefore became an outage: a failover, a
+   * restart, an idle-session timeout, or an administrator running
+   * `pg_terminate_backend`. The connection is already unusable and the pool
+   * discards it either way; the only thing the missing listener changed was
+   * whether the rest of the server survived it.
+   */
+  pool.on("error", (error: Error) => {
+    const report = options.onIdleError ?? defaultIdleErrorReport;
+    report(error);
+  });
+
+  return pool;
+}
+
+function defaultIdleErrorReport(error: Error): void {
+  console.error(
+    "[db] an idle pooled connection failed and was discarded:",
+    error.message,
+  );
 }
 
 /**

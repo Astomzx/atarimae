@@ -25,14 +25,17 @@ if (!configuredTestUrl) {
 }
 
 /**
- * Per checkout, matching `scripts/db.mjs` and the server's test setup.
+ * Per checkout *and* per suite, matching `scripts/db.mjs` and `fixtures/database.ts`.
  *
- * This is the caller that made it necessary: an E2E run starts a real API
- * server with a notification worker, and it keeps polling and draining for as
- * long as the suite lasts. Pointed at a database another checkout is also
- * using, it corrupts that one's unit tests continuously and invisibly.
+ * This is the caller that made the checkout half necessary: an E2E run starts a
+ * real API server with a notification worker, and it keeps polling and draining
+ * for as long as the suite lasts. Pointed at a database another checkout is
+ * also using, it corrupts that one's unit tests continuously and invisibly.
+ *
+ * The suite half is why `pnpm check` and `pnpm test:e2e` can be run at the same
+ * time. They used to share one database and empty each other's tables mid-test.
  */
-const testDatabaseUrl = testDatabaseUrlFor(configuredTestUrl, ROOT);
+const testDatabaseUrl = testDatabaseUrlFor(configuredTestUrl, ROOT, "e2e");
 
 /**
  * Ports are per checkout too, and this is the more dangerous half.

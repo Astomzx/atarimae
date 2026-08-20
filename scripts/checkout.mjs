@@ -83,28 +83,44 @@ export function checkoutTag(root) {
 }
 
 /**
- * `postgresql://…/atarimae_test` in, `postgresql://…/atarimae_test_<tag>` out.
+ * `postgresql://…/atarimae_test` in, `postgresql://…/atarimae_test_<tag>` out —
+ * or `atarimae_test_e2e_<tag>` when a suite is named.
  *
  * Everything else about the URL is preserved, including a `sslmode` query and
  * credentials — only the database name changes.
+ *
+ * **The suite matters as much as the checkout.** One checkout runs two suites
+ * that both empty every table: the server's unit tests truncate and create an
+ * Owner in a `beforeEach`, several hundred times a run, and each E2E spec
+ * truncates in its `beforeAll`. `pnpm check` runs the first and `pnpm test:e2e`
+ * the second, and CLAUDE.md asks you to run both — in two terminals they empty
+ * each other's tables mid-test. The damage never surfaces where it happens: a
+ * browser three tests into a spec finds itself on the first-run setup screen,
+ * or the two TRUNCATEs deadlock and PostgreSQL kills one.
+ *
+ * Derived rather than a second environment variable, for the reason at the top
+ * of this file: a `.env` that has to gain a line is a `.env` that some checkout
+ * will not have.
  */
-export function testDatabaseUrlFor(baseUrl, root) {
+export function testDatabaseUrlFor(baseUrl, root, suite = "") {
   const url = new URL(baseUrl);
   const base = decodeURIComponent(url.pathname.replace(/^\//, ""));
   const tag = checkoutTag(root);
 
   /*
-   * The name is trimmed from the *base*, never from the tag. Truncating the
-   * hash is how two checkouts end up sharing a database again, which is the
-   * one outcome this whole file exists to prevent — and PostgreSQL truncates
-   * silently, so it would come back as the same unexplainable flakiness.
+   * The name is trimmed from the *base*, never from the tag or the suite.
+   * Truncating either is how two checkouts — or two suites — end up sharing a
+   * database again, which is the one outcome this whole file exists to
+   * prevent, and PostgreSQL truncates silently, so it would come back as the
+   * same unexplainable flakiness.
    */
-  const room = MAX_IDENTIFIER_BYTES - tag.length - 1;
+  const suffix = suite ? `${suite}_${tag}` : tag;
+  const room = MAX_IDENTIFIER_BYTES - suffix.length - 1;
   if (room < 1) {
-    throw new Error(`Checkout tag "${tag}" leaves no room for a database name.`);
+    throw new Error(`Checkout tag "${suffix}" leaves no room for a database name.`);
   }
 
-  url.pathname = `/${encodeURIComponent(`${base.slice(0, room)}_${tag}`)}`;
+  url.pathname = `/${encodeURIComponent(`${base.slice(0, room)}_${suffix}`)}`;
   return url.toString();
 }
 

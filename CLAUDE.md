@@ -105,7 +105,7 @@ twice inside one response breaks Fastify's serializer.
 | M6a security, attachments, backup/restore                        | done        |
 | M6b documentation, screenshots, release                          | not started |
 
-487 server unit tests, 66 web unit tests, 47 backup, 20 secret-store,
+496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
 18 desktop (Rust), 154 E2E, 11 migrations. CI green.
 
 ## Suggested order from here
@@ -120,6 +120,13 @@ rate limit is keyed on and what `audit_logs` records, so `X-Forwarded-For` is
 now believed only from addresses an operator names, and from nobody by default.
 Any deployment behind a reverse proxy must set it or the whole office shares one
 rate-limit budget.
+
+**The database pool has an `error` listener, and must keep one.** A pooled
+connection that fails while idle has no caller to reject, so `pg` emits `error`
+on the pool — and an unhandled `error` event is rethrown by Node as an uncaught
+exception. Without the listener, a failover, a restart, an idle-session timeout
+or one `pg_terminate_backend` killed the whole server. `createDatabase` attaches
+one whoever builds the pool, and `db.test.ts` proves it.
 
 **The desktop client is not in the pnpm workspace.** `apps/desktop` has no
 `package.json` on purpose, so `pnpm -r build` never reaches it and `pnpm check`
@@ -152,15 +159,18 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 
 ## Known gaps and unverified things
 
-- **Two checkouts no longer collide.** Was a gap, now fixed:
+- **Two checkouts no longer collide, and neither do two suites.**
   `scripts/checkout.mjs` derives a test database name _and_ an E2E port offset
   from the checkout's own path, so a worktree that copied `.env` gets
   `atarimae_test_zen_merkle_991a84_…` on its own ports instead of deleting this
-  one's rows mid-run. Four callers must agree —
+  one's rows mid-run. `testDatabaseUrlFor` also takes a **suite**, so the
+  Playwright suite is on `atarimae_test_e2e_<tag>` and `pnpm check` and
+  `pnpm test:e2e` are safe to run together. Four callers must agree —
   `db.mjs`, `apps/server/src/test/setup-env.ts`, `e2e/playwright.config.ts` and
   `e2e/fixtures/database.ts` — and the fourth was missed first time round,
   which cost 122 skipped E2E tests. Add a fifth at your peril; there are tests.
-  See `docs/engineering/shared-test-database.md`.
+  `pnpm db:test:reset` prepares both databases; `--e2e` targets just the
+  Playwright one. See `docs/engineering/shared-test-database.md`.
 - **The Docker image builds and runs.** No longer a gap: Docker is installed
   here now, `docker compose up -d --build` works from a clean checkout, both
   containers reach healthy, all migrations apply inside the container and the
@@ -168,17 +178,16 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   `docs/engineering/docker-first-build.md`. Note that signing in needs TLS in
   front: cookies are `Secure` under `NODE_ENV=production`, which is correct and
   is what `docs/deployment/docker.md` describes.
-- **`e2e/tests/m5-ui.spec.ts` is flaky.** Four full runs during the M6a security
-  pass: pass, fail, fail, pass. The two failures were different tests in
-  different projects (`9. publishing queues a delivery` on mobile, then `2. the
-Owner creates a service account` on desktop), each passing on its own
-  immediately afterwards, and the suite is `serial` so one failure skips the
-  rest. Two different tests failing in two different projects is the signature
-  of timing, not of the security change — but that was not proved by re-running
-  the suite on the previous commit, so it is a reading of the evidence rather
-  than a finding. Vite logs `ws proxy socket error: ECONNRESET` throughout,
-  which may or may not be related. Worth chasing before anyone trusts a red CI
-  run.
+- **The E2E flakiness is explained and closed.** It was never a timing problem.
+  Two suites shared one test database — `pnpm check` truncating several hundred
+  times a run while `pnpm test:e2e` truncated per spec — so each emptied the
+  other's tables mid-test, and the damage surfaced anywhere but where it
+  happened. The Playwright suite now has its own database
+  (`atarimae_test_e2e_<tag>`), derived rather than configured, and the pair has
+  been run **at the same time** in one checkout: 496 and 154, both green.
+  `ws proxy socket error: ECONNRESET` in the Vite log is a page closing and
+  appears just as often in runs that pass — ruled out rather than left hanging.
+  `docs/engineering/shared-test-database.md`.
 - **Backup works inside Docker too.** No longer a gap: the image builds with the
   PGDG `postgresql-client-18` layer, `pg_dump` is 18.6, `packages/backup`
   resolves its own `pg` (it is the first workspace package with a runtime

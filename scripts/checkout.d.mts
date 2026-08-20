@@ -13,8 +13,12 @@ export function checkoutTag(root: string): string;
  * Returns `baseUrl` with its database name suffixed by the checkout's tag, so
  * two checkouts never share one test database. Everything else about the URL
  * is preserved.
+ *
+ * `suite` adds a second dimension — pass `"e2e"` for the Playwright suite — so
+ * that the two commands this project asks you to run are safe to run at the
+ * same time in one checkout.
  */
-export function testDatabaseUrlFor(baseUrl: string, root: string): string;
+export function testDatabaseUrlFor(baseUrl: string, root: string, suite?: string): string;
 
 /**
  * A per-checkout offset to add to a base port, so a second checkout's E2E run

@@ -11,6 +11,11 @@
  *
  * Append --test to target TEST_DATABASE_URL instead of DATABASE_URL:
  *   pnpm db:up --test
+ *
+ * Add --e2e to target the Playwright suite's own database, which is the test
+ * database with `e2e` in its name. `reset --test` does both, because the two
+ * suites are meant to be runnable at the same time and a half-prepared pair is
+ * how one of them ends up on the other's tables.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -62,11 +67,11 @@ function loadEnv() {
  * configured: it holds data somebody wants to keep, and moving it out from
  * under them would be the opposite of helpful. See `checkout.mjs`.
  */
-function targetUrl(useTest) {
+function targetUrl(useTest, suite = "") {
   const key = useTest ? "TEST_DATABASE_URL" : "DATABASE_URL";
   const url = process.env[key];
   if (!url) fail(`${key} is not set in .env`);
-  return useTest ? testDatabaseUrlFor(url, ROOT) : url;
+  return useTest ? testDatabaseUrlFor(url, ROOT, suite) : url;
 }
 
 /**
@@ -190,8 +195,8 @@ function listMigrationFiles() {
     .sort();
 }
 
-async function cmdStatus(useTest) {
-  const url = targetUrl(useTest);
+async function cmdStatus(useTest, suite = "") {
+  const url = targetUrl(useTest, suite);
   const files = listMigrationFiles();
   const client = new pg.Client({ connectionString: url });
 
@@ -260,8 +265,8 @@ async function cmdStatus(useTest) {
  * ORDER BY results and unique index behaviour. The builtin C.UTF-8 provider
  * behaves identically on every platform.
  */
-async function cmdReset(useTest, createOnly) {
-  const url = targetUrl(useTest);
+async function cmdReset(useTest, createOnly, suite = "", force = false) {
+  const url = targetUrl(useTest, suite);
   const name = dbNameFrom(url);
   const client = new pg.Client({ connectionString: adminUrl() });
 
@@ -276,7 +281,34 @@ async function cmdReset(useTest, createOnly) {
 
   try {
     if (!createOnly) {
-      // Terminate other sessions, otherwise DROP DATABASE fails.
+      /**
+       * Something else connected is a reason to stop, not a reason to push
+       * harder.
+       *
+       * This used to terminate every session and drop the database without
+       * mentioning it — which, when the connection belonged to a running test
+       * suite or a dev server, destroyed what it was using and left the
+       * failure to appear somewhere else entirely. Named rather than counted,
+       * because "2 connections" does not tell you which window to go and look
+       * at.
+       */
+      const { rows: connected } = await client.query(
+        `SELECT DISTINCT coalesce(application_name, '') AS app
+           FROM pg_stat_activity
+          WHERE datname = $1 AND pid <> pg_backend_pid()`,
+        [name],
+      );
+
+      if (connected.length > 0 && !force) {
+        const who = connected.map((row) => row.app || "unnamed").join(", ");
+        fail(
+          `${name} has ${connected.length} other connection(s): ${who}\n\n` +
+            "Something is using this database — a dev server, a test run, or a\n" +
+            "psql session. Stop it, or pass --force to drop it anyway.",
+        );
+      }
+
+      // Terminate what is left, otherwise DROP DATABASE fails.
       await client.query(
         `SELECT pg_terminate_backend(pid)
            FROM pg_stat_activity
@@ -367,13 +399,19 @@ async function cmdVerify() {
 async function main() {
   const argv = process.argv.slice(2);
   const command = argv[0];
-  const useTest = argv.includes("--test");
+  const e2eOnly = argv.includes("--e2e");
+  // --e2e names a test database, so it implies --test rather than contradicting
+  // it. `reset --e2e` on the development database would be a bad surprise.
+  const useTest = argv.includes("--test") || e2eOnly;
   const createOnly = argv.includes("--create-only");
+  const force = argv.includes("--force");
+  const suite = e2eOnly ? "e2e" : "";
   const rest = argv.slice(1).filter((a) => !a.startsWith("--"));
 
   if (!command) {
     console.log(
-      "\nUsage: node scripts/db.mjs <new|up|down|redo|status|reset|verify> [--test]\n",
+      "\nUsage: node scripts/db.mjs <new|up|down|redo|status|reset|verify> " +
+        "[--test] [--e2e]\n",
     );
     process.exit(1);
   }
@@ -385,22 +423,39 @@ async function main() {
       process.exit(cmdNew(rest[0]));
       break;
     case "up":
-      process.exit(runMigrate(["up"], targetUrl(useTest)));
+      process.exit(runMigrate(["up"], targetUrl(useTest, suite)));
       break;
     case "down":
-      process.exit(runMigrate(["down", rest[0] ?? "1"], targetUrl(useTest)));
+      process.exit(runMigrate(["down", rest[0] ?? "1"], targetUrl(useTest, suite)));
       break;
     case "redo":
-      process.exit(runMigrate(["redo"], targetUrl(useTest)));
+      process.exit(runMigrate(["redo"], targetUrl(useTest, suite)));
       break;
     case "status":
-      process.exit(await cmdStatus(useTest));
+      process.exit(await cmdStatus(useTest, suite));
       break;
-    case "reset":
-      await cmdReset(useTest, createOnly);
-      if (!createOnly) process.exit(runMigrate(["up"], targetUrl(useTest)));
+    case "reset": {
+      /**
+       * `reset --test` prepares both test databases.
+       *
+       * The two suites have one database each so they can run at the same
+       * time, and one command is what makes that reliable: a developer — or a
+       * CI job — who prepares only the one they were thinking about leaves the
+       * other missing or a migration behind, and the suite that finds it says
+       * something about tables rather than about databases.
+       */
+      const suites = useTest && !e2eOnly ? ["", "e2e"] : [suite];
+
+      for (const each of suites) {
+        await cmdReset(useTest, createOnly, each, force);
+        if (!createOnly) {
+          const status = runMigrate(["up"], targetUrl(useTest, each));
+          if (status !== 0) process.exit(status);
+        }
+      }
       process.exit(0);
       break;
+    }
     case "verify":
       process.exit(await cmdVerify());
       break;

@@ -113,6 +113,18 @@ export function useEnterCall() {
     },
     onSuccess: async (_result, target) => {
       await queryClient.invalidateQueries({ queryKey: chatKeys.calls(target.channelId) });
+
+      /**
+       * The channel list too, because answering is how somebody arrives in a
+       * conversation they have never opened.
+       *
+       * A call rings wherever you are — including in a conversation that was
+       * created after your screen loaded. The banner navigates there the moment
+       * this resolves, and that screen finds its channel in the cached list, so
+       * a list from before the conversation existed left the heading reading
+       * 会話 instead of naming the caller.
+       */
+      await queryClient.invalidateQueries({ queryKey: chatKeys.channels() });
     },
   });
 }

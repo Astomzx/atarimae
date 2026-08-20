@@ -181,6 +181,7 @@ function ChannelRow({
  */
 function NewConversation({ onOpened }: { onOpened: (channelId: string) => void }) {
   const { user } = useSession();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
   const members = useQuery({
@@ -191,7 +192,19 @@ function NewConversation({ onOpened }: { onOpened: (channelId: string) => void }
 
   const openDirect = useMutation({
     mutationFn: api.chat.openDirect,
-    onSuccess: (result) => onOpened(result.id),
+    /**
+     * The list is refreshed before the conversation is opened, not after.
+     *
+     * The screen this navigates to finds its channel in the cached channel
+     * list, and a conversation that did not exist a moment ago is not in it —
+     * so it rendered with no channel at all and fell back to calling the
+     * heading 会話 instead of naming the person. It corrected itself whenever
+     * something else happened to refetch, which is why it looked intermittent.
+     */
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: chatKeys.channels() });
+      onOpened(result.id);
+    },
   });
 
   const others = (members.data?.items ?? []).filter(

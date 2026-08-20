@@ -150,7 +150,19 @@ export async function buildApp({
   const app = Fastify(options).withTypeProvider<TypeBoxTypeProvider>();
 
   app.decorate("config", config);
-  app.decorate("db", database ?? createDatabase(config));
+  app.decorate(
+    "db",
+    database ??
+      createDatabase(config, {
+        // Routed to the application logger rather than stderr, so a connection
+        // the database closed underneath us is visible in the same place as
+        // everything else. A warning, not an error: the pool discards the
+        // connection and the next request opens another.
+        onIdleError: (error) => {
+          app.log.warn({ err: error }, "idle database connection failed, discarded");
+        },
+      }),
+  );
   app.decorate(
     "secrets",
     createSecretStore({

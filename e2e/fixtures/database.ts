@@ -21,7 +21,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 function connectionString(): string {
   const configured = process.env["TEST_DATABASE_URL"];
   if (!configured) throw new Error("TEST_DATABASE_URL is not set");
-  return testDatabaseUrlFor(configured, ROOT);
+  // "e2e" as well as the checkout: this suite has its own database so that it
+  // and the server's unit tests can run at the same time without truncating
+  // each other's tables. Miss it here and the specs would reset a database the
+  // server never opened — the same failure, one dimension along.
+  return testDatabaseUrlFor(configured, ROOT, "e2e");
 }
 
 /**

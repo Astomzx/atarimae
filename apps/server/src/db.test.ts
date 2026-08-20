@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import pg from "pg";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { loadConfig } from "./config.js";
 import { createDatabase, withTransaction, type Database } from "./db.js";
@@ -88,5 +89,101 @@ describe("withTransaction", () => {
       "SELECT to_regclass('rollback_probe') IS NOT NULL AS exists",
     );
     expect(rows[0]?.exists).toBe(false);
+  });
+});
+
+/**
+ * The pool must survive PostgreSQL closing a connection.
+ *
+ * A pooled connection that fails while idle — checked in, no query running —
+ * has no caller to reject, so `pg` reports it by emitting `error` on the pool
+ * itself. `error` is Node's one special event: unhandled, it is rethrown as an
+ * uncaught exception and takes the process with it. Without a listener, every
+ * ordinary reason PostgreSQL ends a connection was fatal to the whole server —
+ * a failover, a restart, an idle-session timeout, an administrator running
+ * `pg_terminate_backend`.
+ *
+ * Run against the old `createDatabase` first, where terminating a pooled
+ * connection ends the vitest process with an uncaught exception rather than
+ * failing a test.
+ */
+describe("an idle connection failing", () => {
+  const pools: Database[] = [];
+
+  afterEach(async () => {
+    while (pools.length > 0) await pools.pop()!.end();
+  });
+
+  /** Its own pool per case, so a terminated connection cannot disturb the rest. */
+  function poolWith(onIdleError: (error: Error) => void): Database {
+    const created = createDatabase(loadConfig(), { onIdleError });
+    pools.push(created);
+    return created;
+  }
+
+  /** Kills `pid` from a separate connection, the way an administrator would. */
+  async function terminate(pid: number): Promise<void> {
+    const client = new pg.Client({ connectionString: loadConfig().DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query("SELECT pg_terminate_backend($1)", [pid]);
+    } finally {
+      await client.end();
+    }
+  }
+
+  /** Checks a connection out, learns its pid, and releases it back to the pool. */
+  async function idleBackendPid(pool: Database): Promise<number> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<{ pid: number }>(
+        "SELECT pg_backend_pid() AS pid",
+      );
+      return rows[0]!.pid;
+    } finally {
+      client.release();
+    }
+  }
+
+  it("is reported rather than thrown at nobody", async () => {
+    const failures: Error[] = [];
+    const pool = poolWith((error) => failures.push(error));
+
+    await terminate(await idleBackendPid(pool));
+
+    await expect.poll(() => failures.length, { timeout: 5_000 }).toBeGreaterThan(0);
+
+    // 57P01 — terminating connection due to administrator command. The code is
+    // asserted rather than the message, which PostgreSQL localises.
+    expect((failures[0] as { code?: string }).code).toBe("57P01");
+  });
+
+  it("leaves the pool able to answer the next query", async () => {
+    const pool = poolWith(() => undefined);
+
+    await terminate(await idleBackendPid(pool));
+
+    // The pool discards the dead connection and opens another. Retried because
+    // the terminated one may still be handed out before the pool notices.
+    let result: number | undefined;
+    for (let attempt = 0; attempt < 3 && result === undefined; attempt++) {
+      try {
+        const { rows } = await pool.query<{ n: number }>("SELECT 1 AS n");
+        result = rows[0]!.n;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+
+    expect(result).toBe(1);
+  });
+
+  it("always has a listener, whoever built the pool", () => {
+    // createDatabase attaches one even with no options, so a pool built outside
+    // Fastify — by a script, or a test — is not a way to kill the process.
+    const bare = createDatabase(loadConfig());
+    pools.push(bare);
+
+    expect(bare.listenerCount("error")).toBeGreaterThan(0);
   });
 });

@@ -93,6 +93,62 @@ describe("testDatabaseUrlFor", () => {
   });
 });
 
+/**
+ * The second dimension, and the one that bit inside a single checkout: the
+ * server's unit tests and the Playwright suite both truncate every table, and
+ * this project asks you to run both. Sharing one database, they emptied each
+ * other's tables mid-test — and the failure appeared as a browser three tests
+ * into a spec finding itself on the first-run setup screen.
+ */
+describe("testDatabaseUrlFor, per suite", () => {
+  it("gives the E2E suite a database of its own", () => {
+    expect(testDatabaseUrlFor(BASE, ROOT, "e2e")).not.toBe(
+      testDatabaseUrlFor(BASE, ROOT),
+    );
+  });
+
+  it("is stable, so every caller derives the same one", () => {
+    expect(testDatabaseUrlFor(BASE, ROOT, "e2e")).toBe(
+      testDatabaseUrlFor(BASE, ROOT, "e2e"),
+    );
+  });
+
+  it("still separates two checkouts within one suite", () => {
+    expect(testDatabaseUrlFor(BASE, ROOT, "e2e")).not.toBe(
+      testDatabaseUrlFor(BASE, WORKTREE, "e2e"),
+    );
+  });
+
+  it("says which suite it belongs to, for the moment somebody types \\l", () => {
+    const name = new URL(testDatabaseUrlFor(BASE, ROOT, "e2e")).pathname;
+
+    expect(name).toContain("_e2e_");
+    expect(name).toContain(checkoutTag(ROOT));
+  });
+
+  /**
+   * Neither the suite nor the tag may be trimmed away by the length limit.
+   * Losing either brings back a shared database, silently, because PostgreSQL
+   * truncates without saying so.
+   */
+  it("keeps the suites apart even at the identifier limit", () => {
+    const long = `postgresql://localhost:5432/${"a".repeat(120)}`;
+    const unit = decodeURIComponent(new URL(testDatabaseUrlFor(long, ROOT)).pathname);
+    const e2e = decodeURIComponent(
+      new URL(testDatabaseUrlFor(long, ROOT, "e2e")).pathname,
+    );
+
+    expect(Buffer.byteLength(e2e.slice(1))).toBeLessThanOrEqual(63);
+    expect(e2e).not.toBe(unit);
+    expect(e2e).toContain("_e2e_");
+  });
+
+  /** An empty suite is the unit-test database, so existing callers are unchanged. */
+  it("treats no suite as the plain test database", () => {
+    expect(testDatabaseUrlFor(BASE, ROOT, "")).toBe(testDatabaseUrlFor(BASE, ROOT));
+  });
+});
+
 describe("checkoutTag", () => {
   /** Readable on purpose: `\l` in psql should say which database is whose. */
   it("carries the directory name so a human can tell them apart", () => {

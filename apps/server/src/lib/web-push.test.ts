@@ -162,6 +162,25 @@ describe("VAPID", () => {
     expect(generateVapidKeys().publicKey).not.toBe(generateVapidKeys().publicKey);
   });
 
+  it("pads a leading-zero private scalar before wrapping it as SEC1", () => {
+    const scalar = Buffer.alloc(32);
+    scalar[31] = 1;
+    const ecdh = createECDH("prime256v1");
+    ecdh.setPrivateKey(scalar);
+
+    expect(ecdh.getPrivateKey().length).toBe(1);
+    expect(() =>
+      vapidAuthorization({
+        audience: "https://push.example.test",
+        subject: "mailto:admin@example.test",
+        keys: {
+          publicKey: ecdh.getPublicKey().toString("base64url"),
+          privateKey: scalar.toString("base64url"),
+        },
+      }),
+    ).not.toThrow();
+  });
+
   /**
    * The signature is what stops anyone who obtains an endpoint from pushing to
    * it, so it is verified here the way a push service verifies it — against

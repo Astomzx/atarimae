@@ -37,6 +37,7 @@ const NONCE_BYTES = 12;
 
 /** An uncompressed P-256 point: 0x04 followed by two 32-byte coordinates. */
 const P256_PUBLIC_BYTES = 65;
+const P256_PRIVATE_BYTES = 32;
 
 /**
  * One record, large enough for anything this application sends.
@@ -74,6 +75,19 @@ function fromB64url(text: string): Buffer {
   return Buffer.from(text, "base64url");
 }
 
+/** Node removes leading zeroes from an ECDH private scalar. SEC1 does not. */
+function fixedWidthP256PrivateKey(privateKey: Buffer): Buffer {
+  if (privateKey.length > P256_PRIVATE_BYTES) {
+    throw new Error(
+      `VAPID private key is ${privateKey.length} bytes, expected at most ${P256_PRIVATE_BYTES}.`,
+    );
+  }
+
+  const fixedWidth = Buffer.alloc(P256_PRIVATE_BYTES);
+  privateKey.copy(fixedWidth, P256_PRIVATE_BYTES - privateKey.length);
+  return fixedWidth;
+}
+
 /**
  * HKDF, in the two steps RFC 8291 names separately.
  *
@@ -100,7 +114,7 @@ export function generateVapidKeys(): VapidKeys {
   ecdh.generateKeys();
   return {
     publicKey: b64url(ecdh.getPublicKey()),
-    privateKey: b64url(ecdh.getPrivateKey()),
+    privateKey: b64url(fixedWidthP256PrivateKey(ecdh.getPrivateKey())),
   };
 }
 
@@ -115,7 +129,7 @@ function vapidSigningKey(privateKey: string): KeyObject {
    * because the shape is fixed: version, the 32-byte key, the P-256 OID, and
    * the public point.
    */
-  const priv = ecdh.getPrivateKey();
+  const priv = fixedWidthP256PrivateKey(ecdh.getPrivateKey());
   const pub = ecdh.getPublicKey();
 
   const der = Buffer.concat([

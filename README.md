@@ -131,8 +131,22 @@ Atarimae は、その当たり前を当たり前に実装したらどうなる�
 
 ## 画面
 
-**準備中です。** 動く証拠としては、いまのところ受け入れシナリオの E2E テストが
-その役割を果たしています（[M1](e2e/tests/m1-acceptance.spec.ts)、
+### 公告：共通の本文と、一人ずつの指示
+
+![公開した公告。共通本文、第一営業所の宛先、個人ごとの指示](docs/screenshots/announcement-desktop.png)
+
+### ホーム：PC とスマートフォン
+
+![PC 幅のホーム。確認が必要なお知らせ、メンバー、管理、システム状態](docs/screenshots/home-desktop.png)
+
+<img src="docs/screenshots/home-mobile.png" alt="スマートフォン幅のホーム。同じ機能が縦一列に並ぶ" width="390">
+
+### メンバーと権限
+
+![オーナー、管理者、メンバーと第一営業所への所属](docs/screenshots/members-desktop.png)
+
+動く証拠はスクリーンショットだけではありません。受け入れシナリオ
+（[M1](e2e/tests/m1-acceptance.spec.ts)、
 [M2](e2e/tests/m2-ui.spec.ts)、[M3a](e2e/tests/m3a-ui.spec.ts)、
 [M4](e2e/tests/m4-pwa.spec.ts)、[M5](e2e/tests/m5-ui.spec.ts)、
 [通話](e2e/tests/m5-calls.spec.ts)）。PC とスマートフォンの両方の幅で
@@ -298,13 +312,16 @@ atarimae/
 | M4             | PWA・通知・Windows クライアント        | 完了      |
 | M5             | 公開 API・Webhook・通話                | 完了      |
 | M6a            | セキュリティ・添付・バックアップ／復元 | 完了      |
-| **M6b**        | ドキュメント・リリース                 | **0.0.1** |
+| **M6b**        | ドキュメント・リリース                 | **0.0.2** |
 
-画面写真とデモ動画はまだありません。リリースを止める理由にはしませんでした。
+`v0.0.1` はソースタグとして残します。GitHub Release は、CI、Windows クライアント、
+Docker イメージの全ジョブを通過した `v0.0.2` から公開します。実際の画面は上の
+スクリーンショットで確認できます。
 
 496 のサーバー単体テスト、74 の Web 単体テスト、47 のバックアップ、
 20 の secret-store、18 のデスクトップ（Rust）、158 の E2E、11 のマイグレーション。
-CI は緑です。
+CI はこれらに加えて、Windows 上のデスクトップテストと本番 Docker イメージの
+ビルドを実行します。リリースは全ジョブの成功後に行います。
 
 **この数を書いているのは、この製品の価値が「検証できること」だからです。**
 コメントでしか守られていない規則は、守られていません。

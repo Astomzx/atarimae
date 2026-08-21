@@ -139,7 +139,22 @@ desktop-only feature; the E2E suite runs the same scenarios at both.
 
 ## Screenshots
 
-**Not yet.** For now the acceptance scenarios are the evidence that it works:
+### An announcement: shared body, individual instructions
+
+![A published announcement with a shared body, branch recipients and individual instructions](docs/screenshots/announcement-desktop.png)
+
+### Home: desktop and phone
+
+![The desktop home page with acknowledgements, members, administration and system health](docs/screenshots/home-desktop.png)
+
+<img src="docs/screenshots/home-mobile.png" alt="The same home page at phone width, arranged in one column" width="390">
+
+### Members and permissions
+
+![Owner, administrator and member roles, with branch membership](docs/screenshots/members-desktop.png)
+
+Screenshots are not the only evidence. The acceptance scenarios exercise the
+same flows:
 [M1](e2e/tests/m1-acceptance.spec.ts), [M2](e2e/tests/m2-ui.spec.ts),
 [M3a](e2e/tests/m3a-ui.spec.ts), [M4](e2e/tests/m4-pwa.spec.ts),
 [M5](e2e/tests/m5-ui.spec.ts), [calls](e2e/tests/m5-calls.spec.ts) — each run at
@@ -309,13 +324,16 @@ exists to make impossible.
 | M4        | PWA, push, Windows client                    | done      |
 | M5        | Open API, webhooks, calls                    | done      |
 | M6a       | Security, attachments, backup and restore    | done      |
-| **M6b**   | Documentation and release                    | **0.0.1** |
+| **M6b**   | Documentation and release                    | **0.0.2** |
 
-Screenshots and the demo video are not here yet. They were not made a reason to
-hold the release.
+The `v0.0.1` source tag remains in place. GitHub Releases start with `v0.0.2`
+after CI, the Windows client, and the production Docker image all pass. The
+screenshots above show the actual interface exercised during verification.
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store, 18 desktop
-(Rust), 158 E2E, 11 migrations. CI is green.
+(Rust), 158 E2E, 11 migrations. CI also runs the desktop tests on Windows and
+builds the production Docker image. A release is made only after every job
+passes.
 
 **The counts are here because this product's value is that its claims are
 checkable.** A rule enforced only by a comment is not enforced.

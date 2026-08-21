@@ -46,6 +46,23 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # ubuntu-latest currently ships pg_dump 16. The database service is 18,
+      # and pg_dump deliberately refuses to dump a server newer than itself.
+      # The HTTP backup tests exercise the real binary, so keep the client at
+      # the same major version as production rather than mocking the boundary.
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
+          /usr/lib/postgresql/18/bin/pg_dump --version
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
       - run: pnpm install --frozen-lockfile
 
       - name: Generate .env
@@ -156,3 +173,27 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 14
+
+  desktop:
+    name: Windows desktop tests
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test the Tauri shell
+        run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+  container:
+    name: Production container build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # This catches missing runtime files and failures in the PostgreSQL 18
+      # client layer before an operator discovers them during deployment.
+      - name: Build the production image
+        run: docker build --tag atarimae:ci .

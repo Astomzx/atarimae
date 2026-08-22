@@ -14,7 +14,8 @@ account and the same features.
 - **Announcements** — send a shared notice and each person's assignment together
 - **Acknowledgements** — record what each person read and count only obligations that remain active
 - **Organisation** — manage units, members, administrators, permissions and device sessions
-- **Chat and calls** — channels, direct conversations, attachments, mentions and network calls
+- **Chat and calls** — automatic unit groups, direct conversations, images, files, mentions and calls
+- **Group moderation** — administrators-only posting and per-member muting
 - **Phone and PC** — PWA installation, Web Push, offline reading and a Windows app
 - **Integrations** — OpenAPI 3.1, service accounts and signed webhooks
 - **Operations** — audit logs, CSV, and verified backup and restore including attachments
@@ -38,6 +39,18 @@ member at desktop and phone widths.
 
 <img src="docs/screenshots/admin-announcement-mobile.png" alt="Administrator announcement detail at phone width" width="390">
 
+#### Direct conversation
+
+![An administrator's direct conversation with a member, including message and call history, replies and attachments](docs/screenshots/admin-direct-chat-desktop.png)
+
+<img src="docs/screenshots/admin-direct-chat-mobile.png" alt="An administrator's direct conversation with a member at phone width" width="390">
+
+#### Call
+
+![A direct call started by an administrator, with participant count, return-to-call and leave controls](docs/screenshots/admin-call-desktop.png)
+
+<img src="docs/screenshots/admin-call-mobile.png" alt="An administrator's direct call with a member at phone width" width="390">
+
 ### Member
 
 ![Member home with announcements requiring acknowledgement and no administrative controls](docs/screenshots/member-home-desktop.png)
@@ -46,9 +59,34 @@ member at desktop and phone widths.
 
 <img src="docs/screenshots/member-announcement-mobile.png" alt="A member's announcement at phone width" width="390">
 
+#### Direct conversation
+
+![A member's direct conversation with an administrator, including message history, replies and attachments](docs/screenshots/member-direct-chat-desktop.png)
+
+<img src="docs/screenshots/member-direct-chat-mobile.png" alt="A member's direct conversation with an administrator at phone width" width="390">
+
+#### Call
+
+![A member participating in a direct call with an administrator, with participant count, return-to-call and leave controls](docs/screenshots/member-call-desktop.png)
+
+<img src="docs/screenshots/member-call-mobile.png" alt="A member's direct call with an administrator at phone width" width="390">
+
 ![Owners, administrators and members assigned to 第一営業所](docs/screenshots/members-desktop.png)
 
 ## Start using it
+
+### Windows (recommended)
+
+Extract the ZIP and double-click **`install-windows.cmd`** in its root. The
+Japanese wizard checks or installs Docker Desktop, generates encryption keys,
+starts the database and app, configures HTTPS, and verifies the result. Running
+it again preserves existing settings and keys.
+
+- “Try on this PC only” opens `localhost` without further configuration.
+- “Use in the company” asks for one domain name. DNS and the router's 80/443
+  forwarding are external settings, so the wizard shows those two checks clearly.
+
+### Building the server manually
 
 You need Docker Compose and a reverse proxy that terminates TLS.
 

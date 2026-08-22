@@ -13,7 +13,8 @@
 - **公告** — 全員向けの本文と、一人ひとりの担当を一度に配信
 - **確認** — 誰が何を読んだかを記録し、現在有効な確認義務だけを集計
 - **組織管理** — 部署、メンバー、管理者、権限、複数端末のセッション
-- **チャットと通話** — チャンネル、一対一、添付、メンション、ネットワーク通話
+- **チャットと通話** — 部署ごとの自動グループ、一対一、画像・ファイル、メンション、通話
+- **グループ管理** — 管理者のみ投稿、メンバーごとの発言停止
 - **スマートフォンと PC** — PWA、Web Push、オフライン閲覧、Windows アプリ
 - **連携** — OpenAPI 3.1、サービスアカウント、署名付き Webhook
 - **運用** — 監査ログ、CSV、添付を含むバックアップと検証付き復元
@@ -36,6 +37,18 @@
 
 <img src="docs/screenshots/admin-announcement-mobile.png" alt="スマートフォン幅の管理者画面。公告の本文、宛先、個人ごとの内容" width="390">
 
+#### 一対一チャット
+
+![管理者から見たメンバーとの一対一チャット。会話履歴、通話履歴、返信、添付](docs/screenshots/admin-direct-chat-desktop.png)
+
+<img src="docs/screenshots/admin-direct-chat-mobile.png" alt="スマートフォン幅の管理者画面。メンバーとの一対一チャット" width="390">
+
+#### 通話
+
+![管理者から開始した一対一通話。参加人数、通話に戻る、退出](docs/screenshots/admin-call-desktop.png)
+
+<img src="docs/screenshots/admin-call-mobile.png" alt="スマートフォン幅の管理者画面。メンバーとの一対一通話" width="390">
+
 ### メンバー
 
 ![メンバーのホーム。確認が必要なお知らせとシステム状態。管理機能は表示されない](docs/screenshots/member-home-desktop.png)
@@ -44,9 +57,33 @@
 
 <img src="docs/screenshots/member-announcement-mobile.png" alt="スマートフォン幅のメンバー画面。共通本文、自分だけの担当、確認ボタン" width="390">
 
+#### 一対一チャット
+
+![メンバーから見た管理者との一対一チャット。会話履歴、返信、添付](docs/screenshots/member-direct-chat-desktop.png)
+
+<img src="docs/screenshots/member-direct-chat-mobile.png" alt="スマートフォン幅のメンバー画面。管理者との一対一チャット" width="390">
+
+#### 通話
+
+![メンバーが参加した管理者との一対一通話。参加人数、通話に戻る、退出](docs/screenshots/member-call-desktop.png)
+
+<img src="docs/screenshots/member-call-mobile.png" alt="スマートフォン幅のメンバー画面。管理者との一対一通話" width="390">
+
 ![オーナー、管理者、メンバーと第一営業所への所属](docs/screenshots/members-desktop.png)
 
 ## すぐに使う
+
+### Windows（推奨）
+
+ZIP を展開し、ルートにある **`install-windows.cmd` をダブルクリック**してください。
+日本語の画面が Docker Desktop の確認・インストール、暗号鍵の生成、データベース、
+HTTPS、起動確認まで進めます。既存の設定と暗号鍵は再実行しても上書きしません。
+
+- 「このPCだけで試用」は、追加の入力なしで `localhost` を開きます。
+- 「会社で利用」は、利用するドメイン名を1つ入力します。DNS とルーターの
+  80/443 転送だけはPC外部の設定なので、セットアップ画面が確認項目を表示します。
+
+### サーバーを手動で構築する場合
 
 必要なものは Docker Compose と TLS を終端するリバースプロキシです。
 

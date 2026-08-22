@@ -6,6 +6,22 @@ worker process to run.
 
 Written to be followed by somebody who has not read the source.
 
+## Windows one-click setup
+
+For a Windows host, extract the repository archive and double-click
+`install-windows.cmd`. The Japanese wizard:
+
+1. installs Docker Desktop through Windows Package Manager when it is absent;
+2. preserves an existing `.env`, or generates every secret when it is new;
+3. offers a local-only trial or an HTTPS office deployment;
+4. starts the database, migrations, application and (for HTTPS) Caddy;
+5. waits for the real health endpoint and creates an Atarimae desktop shortcut.
+
+An office deployment still needs facts the PC cannot change by itself: the
+chosen DNS name must point to that office, and the router must forward TCP
+80/443 and UDP 443 to the Windows host. The wizard prints exactly these checks.
+Everything on the Windows host is automated.
+
 ## Requirements
 
 - Docker with Compose v2 (`docker compose`, not `docker-compose`)

@@ -1,5 +1,6 @@
 import type {
   ChannelMember,
+  ChannelSummary,
   Message,
   UploadAttachmentResponse,
 } from "@atarimae/api-schema";
@@ -158,6 +159,10 @@ function ChannelPage({ channelId }: { channelId: string }) {
         </p>
       )}
 
+      {channel?.canModerate && (
+        <ModerationPanel channel={channel} members={members.data?.items ?? []} />
+      )}
+
       {channel?.isMember && <CallPanel channelId={channelId} />}
 
       {messages.isError && (
@@ -208,7 +213,7 @@ function ChannelPage({ channelId }: { channelId: string }) {
        * in their list is one they cannot see at all — offering a box to type
        * in would promise something the server is about to refuse.
        */}
-      {channel?.isMember && (
+      {channel?.canPost && (
         <Composer
           channelId={channelId}
           members={members.data?.items ?? []}
@@ -218,8 +223,99 @@ function ChannelPage({ channelId }: { channelId: string }) {
         />
       )}
 
-      {channel !== null && !channel.isMember && <JoinNotice channelId={channelId} />}
+      {channel?.isMember && !channel.canPost && (
+        <p className="alert alert--info" data-testid="posting-restricted">
+          {channel.postingPolicy === "admins_only"
+            ? "このグループは現在、管理者のみ投稿できます。"
+            : "このグループでは管理者により発言が停止されています。"}
+        </p>
+      )}
+
+      {channel !== null && !channel.isMember && !channel.canModerate && (
+        <JoinNotice channelId={channelId} />
+      )}
     </div>
+  );
+}
+
+function ModerationPanel({
+  channel,
+  members,
+}: {
+  channel: ChannelSummary;
+  members: readonly ChannelMember[];
+}) {
+  const queryClient = useQueryClient();
+
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: chatKeys.channels() }),
+      queryClient.invalidateQueries({ queryKey: chatKeys.members(channel.id) }),
+    ]);
+  };
+
+  const policy = useMutation({
+    mutationFn: (value: "everyone" | "admins_only") =>
+      api.chat.setPostingPolicy(channel.id, value),
+    onSuccess: refresh,
+  });
+  const mute = useMutation({
+    mutationFn: ({ userId, muted }: { userId: string; muted: boolean }) =>
+      api.chat.setMemberMuted(channel.id, userId, muted),
+    onSuccess: refresh,
+  });
+
+  return (
+    <details className="chat-moderation" data-testid="chat-moderation">
+      <summary>グループの発言設定</summary>
+      <div className="form chat-moderation__body">
+        <label className="field">
+          <span className="field__label">投稿できる人</span>
+          <select
+            className="field__input"
+            value={channel.postingPolicy}
+            onChange={(event) =>
+              policy.mutate(event.target.value as "everyone" | "admins_only")
+            }
+            disabled={policy.isPending}
+            data-testid="posting-policy"
+          >
+            <option value="everyone">全員</option>
+            <option value="admins_only">管理者のみ</option>
+          </select>
+        </label>
+
+        {members.some((member) => member.role === "member") && (
+          <div className="field">
+            <span className="field__label">個別の発言停止</span>
+            <ul className="chat-moderation__members">
+              {members
+                .filter((member) => member.role === "member")
+                .map((member) => (
+                  <li key={member.userId}>
+                    <span>{member.displayName}</span>
+                    <button
+                      type="button"
+                      className="button button--quiet"
+                      onClick={() =>
+                        mute.mutate({ userId: member.userId, muted: !member.muted })
+                      }
+                      disabled={mute.isPending}
+                      data-testid={`mute-${member.displayName}`}
+                    >
+                      {member.muted ? "発言を許可" : "発言を停止"}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
+        {(policy.isError || mute.isError) && (
+          <p className="alert alert--error">{errorMessage(policy.error ?? mute.error)}</p>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -784,6 +880,7 @@ function Composer({
           <input
             ref={fileInput}
             type="file"
+            accept="image/*,.heic,.heif,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
             className="field__input"
             multiple
             disabled={uploadFile.isPending}

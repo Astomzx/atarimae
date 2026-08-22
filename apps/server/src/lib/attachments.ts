@@ -34,6 +34,8 @@ export interface FileKind {
   signatures?: readonly (readonly number[])[];
   /** Formats with no signature at all, validated as text instead. */
   text?: true;
+  /** ISO Base Media brands used by HEIF/HEIC, found in the ftyp box. */
+  isoBrands?: readonly string[];
 }
 
 const ZIP_SIGNATURES = [
@@ -75,6 +77,17 @@ export const ALLOWED_TYPES: Readonly<Record<string, FileKind>> = {
     inline: true,
     // RIFF....WEBP — the four size bytes in between are skipped by the check.
     signatures: [[0x52, 0x49, 0x46, 0x46]],
+  },
+  // Safari and iOS commonly hand the original camera file to a file input.
+  // Browsers do not consistently render it, so it is downloadable rather than
+  // inline; accepting and verifying it still lets a phone send the photo.
+  heic: {
+    contentType: "image/heic",
+    isoBrands: ["heic", "heix", "hevc", "hevx"],
+  },
+  heif: {
+    contentType: "image/heif",
+    isoBrands: ["mif1", "msf1", "heic", "heix", "hevc", "hevx"],
   },
 
   xlsx: {
@@ -139,6 +152,21 @@ function startsWithSignature(bytes: Uint8Array, signature: readonly number[]): b
   return signature.every((byte, index) => bytes[index] === byte);
 }
 
+function hasIsoBrand(bytes: Uint8Array, allowed: readonly string[]): boolean {
+  if (bytes.length < 12) return false;
+  if (new TextDecoder("ascii").decode(bytes.subarray(4, 8)) !== "ftyp") return false;
+
+  // Major brand at byte 8, then compatible brands after the minor version.
+  const candidates = [8];
+  for (let offset = 16; offset + 4 <= Math.min(bytes.length, 128); offset += 4) {
+    candidates.push(offset);
+  }
+  const decoder = new TextDecoder("ascii");
+  return candidates.some((offset) =>
+    allowed.includes(decoder.decode(bytes.subarray(offset, offset + 4))),
+  );
+}
+
 /**
  * Text has no signature, so "is this really text" is answered by decoding it:
  * valid UTF-8, and no NUL bytes. A binary file renamed to .txt fails on one or
@@ -189,7 +217,11 @@ export function validateUpload(
 
   const matches = kind.text
     ? looksLikeText(bytes)
-    : (kind.signatures ?? []).some((signature) => startsWithSignature(bytes, signature));
+    : kind.isoBrands
+      ? hasIsoBrand(bytes, kind.isoBrands)
+      : (kind.signatures ?? []).some((signature) =>
+          startsWithSignature(bytes, signature),
+        );
 
   if (!matches) return { ok: false, reason: "CONTENT_MISMATCH" };
 

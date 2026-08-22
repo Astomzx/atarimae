@@ -11,7 +11,7 @@ They are stated in the project's own notes, and each closes a specific hole.
 ### 1. An allow-list of extensions
 
 `apps/server/src/lib/attachments.ts` holds the whole list: PDF, JPEG, PNG, GIF,
-WebP, xlsx, docx, pptx, ZIP, CSV, plain text.
+WebP, HEIC/HEIF, xlsx, docx, pptx, ZIP, CSV, plain text.
 
 A deny-list is a promise to have thought of every dangerous extension, which
 nobody has ever managed. Everything absent is refused, including whatever the
@@ -31,6 +31,7 @@ format is verified by its signature:
 | PDF              | `%PDF-`                                                          |
 | JPEG / PNG / GIF | Format signature                                                 |
 | WebP             | `RIFF` container                                                 |
+| HEIC / HEIF      | ISO Base Media `ftyp` box and an allowed HEIF brand              |
 | xlsx/docx/pptx   | A real ZIP container; the specific type comes from the extension |
 | ZIP              | ZIP signature                                                    |
 | CSV / txt        | Decodes as UTF-8, and contains no NUL byte                       |
@@ -65,8 +66,11 @@ able to fetch its files, including ones they were sent while still a member and
 whose URLs are still in their browser history.
 
 The response also carries `X-Content-Type-Options: nosniff` and a
-`Content-Disposition` of `attachment` — except for the verified image formats,
+`Content-Disposition` of `attachment` — except for the verified browser image formats,
 which are `inline` so a photograph appears in the conversation.
+HEIC/HEIF is verified and accepted for iPhone uploads, but stays an attachment
+because browser rendering support is inconsistent; JPEG, PNG, GIF and WebP are
+shown inline.
 
 ## Why upload and send are separate
 

@@ -67,7 +67,7 @@ describe("error handling", () => {
   });
 
   /**
-   * M0 regression: Fastify raises its own errors for oversized bodies,
+   * Regression: Fastify raises its own errors for oversized bodies,
    * unsupported content types and unparseable JSON. Reporting them as 500 both
    * misleads the client and buries genuine server faults in noise.
    */

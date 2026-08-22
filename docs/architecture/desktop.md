@@ -84,7 +84,7 @@ have is worse than no tick.
 ## Notifications, and why they are polled
 
 This is the item that was further away than it looked, and the reason is worth
-keeping: **the obvious plan does not work.** Wiring up the push tables M2 left
+keeping: **the obvious plan does not work.** Wiring up the previously unused push tables
 unused gives the _PWA_ notifications. It gives this client none, because
 WebView2 refuses the push subscription outright with an `AbortError` and has
 never implemented the HTML5 Notification API at all ([WebView2Feedback #308],

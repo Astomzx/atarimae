@@ -1,406 +1,167 @@
 # Atarimae
 
-**当たり前のことが、当たり前にできる社内掲示板** — a communication board where
-the basics just work.
+**An internal noticeboard where the basics simply work.**
 
-A free, self-hosted announcement and communication board for small companies. No
-per-seat pricing, no user limit, open source under AGPL-3.0. There is no hosted
-service and nobody to contact.
+Atarimae is an open-source app for small companies to run on their own server.
+It brings announcements, acknowledgements and chat together in one place. It is
+free, has no per-person limit, and gives phones, PCs and the Windows app the same
+account and the same features.
 
-📖 **日本語: [README.md](README.md)** — the primary version, and the one the
-author reads.
+📖 **日本語: [README.md](README.md)**
 
----
+## Everything in one place
 
-## Why this exists
+- **Announcements** — send a shared notice and each person's assignment together
+- **Acknowledgements** — record what each person read and count only obligations that remain active
+- **Organisation** — manage units, members, administrators, permissions and device sessions
+- **Chat and calls** — channels, direct conversations, attachments, mentions and network calls
+- **Phone and PC** — PWA installation, Web Push, offline reading and a Windows app
+- **Integrations** — OpenAPI 3.1, service accounts and signed webhooks
+- **Operations** — audit logs, CSV, and verified backup and restore including attachments
 
-The same walls, over and over, in software that companies pay for:
-
-- an administrator who cannot add another administrator
-- one account that cannot be used on both the office PC and a phone in the field
-- a company that cannot get its own data back out
-
-None of these are advanced features. **They are the basics.** Atarimae is what
-happens when the basics are implemented as basics.
-
-| The thing                              | How it works here                                       |
-| -------------------------------------- | ------------------------------------------------------- |
-| An administrator adds an administrator | On the permissions screen. No request, no waiting       |
-| One account, several devices           | Concurrent sessions, each revocable by their owner      |
-| A company exports its own data         | CSV per announcement, and a whole-system backup archive |
-
----
-
-## What it does
-
-### One announcement carries both the notice and each person's instructions
-
-```
-明日の予定                          ← the shared body, for everybody
-朝礼は8時30分から。全員参加してください。
-
-あなたの担当                        ← shown only to that one person
-8:30 第一営業所集合、その後A区域を担当
-```
-
-田中 sees only 田中's assignment; 佐藤 sees only 佐藤's. What the acknowledgement
-button records is **the combination that person actually saw** — shared body plus
-their own section.
-
-Typing forty of those by hand is not realistic, so assignments come in by CSV:
-download the roster, fill the column in Excel, upload it back.
-
-### Acknowledgement statistics you can explain
-
-The denominator is **currently active acknowledgement obligations** — not the
-department's headcount, not the number of addressees, not the total delivered.
-Which is what makes these true:
-
-- The recipients are fixed at publication, so a later transfer never changes a
-  past acknowledgement rate.
-- A disabled member drops out of the denominator (otherwise the rate never
-  reaches 100% while anybody cannot sign in).
-- But if that person had already acknowledged, their record stays.
-- An acknowledgement already given cannot be waived, not even by an administrator.
-
-**"Sent for acknowledgement" is never displayed when it reached nobody.** A
-command that affects zero people returns 422 with a breakdown, never 200 with a
-zero. That is the central claim of this product, so the same rule applies to
-every endpoint in it.
-
-Also, around announcements:
-
-- Targeting by department, branch or team, or by individual
-- Deadlines, with an email reminder 24 hours before — sent exactly once
-- CSV export of acknowledgement results
-- An audit log of administrative actions
-
-### Chat and calls
-
-**Chat.** Channels (public and private) and one-to-one conversations, file
-attachments, mentions, unread counts with mentions distinguished from them, and
-a WebSocket for immediacy.
-
-Some things are deliberately absent until after v1.0: editing, deletion,
-reactions, link previews, search, threads, presence, typing indicators. **The
-interface matches the implemented scope exactly** — nothing is stubbed and
-nothing is disabled-with-a-tooltip.
-
-**Calls** are network calls, the way LINE and WeChat do them — not telephone
-calls. One-to-one and group are not two features: a call belongs to a channel,
-and a channel is either a conversation or a group.
-
-Atarimae does not carry the audio and is not going to. **Point it at the Jitsi
-already running in your server cupboard and the calls never leave the building.**
-What Atarimae holds is who is being called, when it started, whether anybody
-answered, and the record afterwards. The room opens in its own window, and is
-embedded in the page only when an administrator says their provider permits it.
-
-### Phone, PC, and no signal at all
-
-**Nothing exists at one width and not the other.** No phone-only feature, no
-desktop-only feature; the E2E suite runs the same scenarios at both.
-
-- **PWA** — installable, with Web Push notifications.
-- **Offline** — your own announcements stay readable with no network, and
-  **every one carries the time it was fetched, unmissably on screen**. That
-  stamp is the whole of the argument for allowing this at all — a driver in a
-  basement reading yesterday's roster as today's is the failure — and an E2E
-  test fails without it. Acknowledging offline records nothing, and says so.
-- **Windows desktop client** — a taskbar window. Inside it is the same web
-  application the server serves; there is no Windows-only feature. It asks
-  where your server is, and refuses an address that does not answer.
-
-### Integrating
-
-- **OpenAPI 3.1** — `apps/server/openapi.json` is generated, committed, and CI
-  fails when it drifts. Browsable at `/docs` in development.
-- **Service accounts** — an integration is not a person's token. It is a
-  different kind of account in the same table, and it cannot hold Owner.
-- **Webhooks** — delivered from an outbox with retries, and the timestamp is
-  signed together with the body. A webhook may not point inside your network
-  (a call provider may — the reasons differ, and both are in
-  `docs/architecture/webhooks.md`).
-
-### Operating it
-
-- **Backup** — database and attachments in one archive, checked before it is
-  written. `pnpm backup:verify` reads an archive and touches nothing else.
-  Restore proves the result matches.
-- **Optional archive encryption** — delegated to `age`. **This project never
-  generates or holds a key**; it encrypts to a public key you already manage.
-- **Security** — Argon2id passwords, AES-256-GCM for credentials that must be
-  replayed elsewhere, sign-in rate limiting, an audit log, and a strict CSP.
-  The line that matters most is `frame-ancestors 'none'`: a page that can be
-  framed can be covered, and then a click lands on 確認 — the record would be
-  correct and the claim it supports would be false.
-
----
+An administrator can add another administrator. One account can be signed in on
+several devices. A company can take its own data out. There is no approval process,
+per-seat plan or official cloud service.
 
 ## Screenshots
 
-### An announcement: shared body, individual instructions
+Every image uses the same demo data, operated as both an administrator and a
+member at desktop and phone widths.
 
-![A published announcement with a shared body, branch recipients and individual instructions](docs/screenshots/announcement-desktop.png)
+### Administrator
 
-### Home: desktop and phone
+![Administrator home with pending acknowledgements, member management, announcement creation and system status](docs/screenshots/admin-home-desktop.png)
 
-![The desktop home page with acknowledgements, members, administration and system health](docs/screenshots/home-desktop.png)
+![Administrator announcement list with creation, recipient counts, acknowledgement requirements and publication state](docs/screenshots/admin-announcements-desktop.png)
 
-<img src="docs/screenshots/home-mobile.png" alt="The same home page at phone width, arranged in one column" width="390">
+![Administrator announcement detail with shared text, recipients, personal content and acknowledgement status](docs/screenshots/admin-announcement-desktop.png)
 
-### Members and permissions
+<img src="docs/screenshots/admin-announcement-mobile.png" alt="Administrator announcement detail at phone width" width="390">
 
-![Owner, administrator and member roles, with branch membership](docs/screenshots/members-desktop.png)
+### Member
 
-Screenshots are not the only evidence. The acceptance scenarios exercise the
-same flows:
-[M1](e2e/tests/m1-acceptance.spec.ts), [M2](e2e/tests/m2-ui.spec.ts),
-[M3a](e2e/tests/m3a-ui.spec.ts), [M4](e2e/tests/m4-pwa.spec.ts),
-[M5](e2e/tests/m5-ui.spec.ts), [calls](e2e/tests/m5-calls.spec.ts) — each run at
-desktop and phone widths.
+![Member home with announcements requiring acknowledgement and no administrative controls](docs/screenshots/member-home-desktop.png)
 
----
+![A member's announcement with shared text, their personal assignment and the acknowledgement button](docs/screenshots/member-announcement-desktop.png)
 
-## Deploying
+<img src="docs/screenshots/member-announcement-mobile.png" alt="A member's announcement at phone width" width="390">
 
-You need Docker, and TLS in front of it: session cookies are `Secure` in
-production, so sign-in does not work without it.
+![Owners, administrators and members assigned to 第一営業所](docs/screenshots/members-desktop.png)
+
+## Start using it
+
+You need Docker Compose and a reverse proxy that terminates TLS.
 
 ```bash
 git clone https://github.com/Astomzx/atarimae.git
-```
-
-```bash
+cd atarimae
 node scripts/setup-env.mjs
 ```
 
-Set `PUBLIC_ORIGIN` in the generated `.env`, then:
+Set `PUBLIC_ORIGIN` in the generated `.env` to the HTTPS address that people will
+open. One command then builds the image, prepares the database and starts the app.
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
+
+Open `PUBLIC_ORIGIN` and create the first Owner. There is no separate activation.
+On later restarts and upgrades, pending database changes are applied automatically
+before the server accepts traffic.
+
+TLS, reverse proxies, SMTP, backups and upgrades are collected in the
+**[Docker operations guide](docs/deployment/docker.md)**.
+
+> Keep `ENCRYPTION_KEY_CURRENT` from `.env` somewhere safe and separate from the
+> database backup. Losing it makes stored external credentials impossible to decrypt.
+
+## Using Atarimae
+
+### Administrator
+
+1. Add the organisation and its members, then give administrative access only to
+   the people who need it.
+2. Write an announcement and address it to units or individuals. Personal
+   assignments can be imported together from CSV.
+3. After publication, follow acknowledgement status on screen or export it as CSV.
+   An operation that affects nobody is never reported as a success.
+
+### Member
+
+After signing in, announcements that need attention, personal assignments and
+unread conversations appear together on the home screen. A member reads both the
+shared text and their own content before acknowledging it. Previously fetched
+announcements remain readable offline, with the fetch time always visible; an
+offline acknowledgement is not recorded.
+
+## Operations
+
+An upgrade is the same start command after pulling the source.
 
 ```bash
-docker compose exec app node scripts/db.mjs up
+git pull
+docker compose up -d --build
 ```
 
-Open the address and create the first Owner. There is no activation step and
-nobody to contact.
+A backup places the database and every attachment in one verified archive.
 
-Full instructions, including TLS, SMTP, backups and updating:
-**[docs/deployment/docker.md](docs/deployment/docker.md)**
+```bash
+docker compose exec app node packages/backup/dist/cli.js backup \
+  --out /var/lib/atarimae/backups/atarimae.tar.gz
+```
 
-> **Back up `ENCRYPTION_KEY_CURRENT` separately from your database dumps.**
-> Losing it permanently destroys every stored external credential.
-
-> **Behind a reverse proxy, set `TRUSTED_PROXY_IPS`.** Without it the whole
-> office shares one sign-in rate-limit budget.
-
----
+The commands for verification and restore, encryption and scheduling are in the
+[Docker operations guide](docs/deployment/docker.md#backups).
 
 ## Development
 
-| Tool       | Version              | Why                                            |
-| ---------- | -------------------- | ---------------------------------------------- |
-| Node.js    | 22+ (24 recommended) | `process.loadEnvFile`                          |
-| pnpm       | 10+                  | workspace management                           |
-| PostgreSQL | **18+**              | `uuidv7()` and the builtin `C.UTF-8` collation |
-
-PostgreSQL 18 is a hard floor, not a preference. The collation is a correctness
-requirement: libc collations differ between a Windows development machine and a
-Linux container, which silently changes ORDER BY results and unique index
-behaviour. See [docs/architecture/decisions.md](docs/architecture/decisions.md).
+Development uses Node.js 22 or later, pnpm 10 or later and PostgreSQL 18 or later.
 
 ```bash
 pnpm install
-```
-
-```bash
 node scripts/setup-env.mjs
-```
-
-```bash
 pnpm db:reset
-```
-
-```bash
 pnpm dev
 ```
 
-- Web client: http://localhost:5173
-- API: http://localhost:3000/api/v1
-- API docs (development only): http://localhost:3000/docs
+Run `pnpm check` before submitting any change, and `pnpm test:e2e` when changing
+routes or the interface. Architecture, deployment, defects found during development
+and their regression tests live under [docs/](docs/).
 
-### Checks
+| Location       | Purpose                                                |
+| -------------- | ------------------------------------------------------ |
+| `apps/server`  | Fastify, REST / OpenAPI and WebSocket                  |
+| `apps/web`     | React, Vite and TanStack Query                         |
+| `apps/desktop` | Tauri Windows client displaying the same web app       |
+| `packages`     | Shared API schema, secret storage and backup packages  |
+| `migrations`   | PostgreSQL migrations with both up and down directions |
+| `e2e`          | Playwright scenarios at desktop and phone widths       |
 
-```bash
-pnpm check
-```
+## What matters here
 
-Builds, then runs format check, lint, typecheck and unit tests — the same gates
-as CI, in the same order.
+- **No silent success.** An operation that affects nobody returns the reason instead.
+- **Verifiable behaviour.** Important constraints have tests; CI checks units, E2E,
+  Windows and the production container.
+- **No data lock-in.** CSV, OpenAPI, webhooks and complete backups are built in.
+- **One product on every device.** Phone and PC do not have different feature sets.
+- **Japanese first.** The interface is Japanese, and the Japanese and English
+  READMEs describe the same product.
 
-```bash
-pnpm test:e2e
-```
+For the reasons behind the design, start with the
+[announcement model](docs/architecture/announcement-model.md),
+[security](docs/architecture/security.md) and
+[backup](docs/architecture/backup.md) documents.
 
-Playwright, at desktop and phone widths. Browsers need installing once:
+## Security, licence and support
 
-```bash
-pnpm --filter @atarimae/e2e install-browsers
-```
+Report vulnerabilities privately using [SECURITY.md](SECURITY.md), not a public
+issue.
 
-**Those two are safe to run at the same time.** The unit suite and the E2E suite
-have a database each, and the names are derived from the checkout rather than
-configured. Why, and what it cost before they were:
-[docs/engineering/shared-test-database.md](docs/engineering/shared-test-database.md).
+Atarimae is licensed under [AGPL-3.0-only](LICENSE). You may use, modify and run it
+yourself. If you offer a modified version as a network service, you must provide
+that version's source to its users.
 
-### Database
-
-Migrations are plain SQL with both directions mandatory. `pnpm db:verify` runs
-`up → down → up` and fails if any migration cannot be rolled back.
-
-| Command              | What it does                                  |
-| -------------------- | --------------------------------------------- |
-| `pnpm db:new <name>` | Scaffold a migration, both directions stubbed |
-| `pnpm db:up`         | Apply pending migrations                      |
-| `pnpm db:down`       | Roll back the most recent one                 |
-| `pnpm db:status`     | Show applied and pending                      |
-| `pnpm db:reset`      | Drop, recreate and migrate the dev database   |
-| `pnpm db:verify`     | Prove every migration is reversible           |
-
-Append `--test` to target the test database, and `--e2e` for the E2E one.
-
-### Backups
-
-```bash
-pnpm backup                      # database + attachments, one archive
-pnpm backup:verify <file>        # read an archive, touch nothing else
-pnpm restore <file> [--force]    # put one back, then prove it matches
-```
-
----
-
-## Layout
-
-```text
-atarimae/
-├─ apps/
-│  ├─ server/          Fastify 5 + TypeBox, REST + OpenAPI 3.1, WebSocket
-│  ├─ web/             React 19 + Vite 6 + TanStack Query
-│  └─ desktop/         Tauri (Rust). Outside the pnpm workspace on purpose
-├─ packages/
-│  ├─ api-schema/      TypeBox schemas — the single source of truth for types
-│  ├─ secret-store/    AES-256-GCM, only for credentials replayed elsewhere
-│  └─ backup/          The archive format, and backup / verify / restore
-├─ migrations/         Plain SQL, up and down
-├─ e2e/                Playwright
-└─ docs/
-   ├─ architecture/    Frozen data model, technical decisions
-   ├─ deployment/      Docker
-   └─ engineering/     Defects found while building, and their guards
-```
-
-Request and response types are defined once in `packages/api-schema` and reused
-by Fastify for validation, by `@fastify/swagger` for the OpenAPI document, and by
-the web client for its types.
-
-The announcement data model is **frozen** and documented in
-[docs/architecture/announcement-model.md](docs/architecture/announcement-model.md).
-It explains not only what the tables are, but which failure each constraint
-exists to make impossible.
-
----
-
-## Status
-
-| Milestone |                                              | State     |
-| --------- | -------------------------------------------- | --------- |
-| M0        | Foundation, CI, migrations, E2E              | done      |
-| M1        | Accounts, org units, permissions             | done      |
-| M2        | Announcements, per-person content, SMTP, CSV | done      |
-| M3a       | Chat and attachments                         | done      |
-| M4        | PWA, push, Windows client                    | done      |
-| M5        | Open API, webhooks, calls                    | done      |
-| M6a       | Security, attachments, backup and restore    | done      |
-| **M6b**   | Documentation and release                    | **0.0.2** |
-
-The `v0.0.1` source tag remains in place. GitHub Releases start with `v0.0.2`
-after CI, the Windows client, and the production Docker image all pass. The
-screenshots above show the actual interface exercised during verification.
-
-496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store, 18 desktop
-(Rust), 158 E2E, 11 migrations. CI also runs the desktop tests on Windows and
-builds the production Docker image. A release is made only after every job
-passes.
-
-**The counts are here because this product's value is that its claims are
-checkable.** A rule enforced only by a comment is not enforced.
-
----
-
-## Where the interesting reading is
-
-Possibly faster than reading the code.
-
-| Document                                                            | What it is                                                                    |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| [announcement-model.md](docs/architecture/announcement-model.md)    | Why acknowledgement statistics are trustworthy, constraint by constraint      |
-| [security.md](docs/architecture/security.md)                        | Why clickjacking, of all things, is the attack this product has to care about |
-| [calls.md](docs/architecture/calls.md)                              | What Atarimae refuses to carry, and what that costs                           |
-| [attachments.md](docs/architecture/attachments.md)                  | The four upload rules and the hole each one closes                            |
-| [backup.md](docs/architecture/backup.md)                            | Why the encryption key is not in the archive                                  |
-| [pwa.md](docs/architecture/pwa.md)                                  | Where an offline client nearly breaks this product's own rule                 |
-| [reconsidering.md](docs/architecture/reconsidering.md)              | Six refusals, re-examined one at a time                                       |
-| [m0-regressions.md](docs/engineering/m0-regressions.md)             | Eleven real defects, each with the test that now prevents it                  |
-| [shared-test-database.md](docs/engineering/shared-test-database.md) | How long it takes to notice the measurement is what is broken                 |
-
-`reconsidering.md` is the method as much as the content: a refusal written down
-in enough detail to be checked is a refusal somebody can find the error in. Four
-of the six were overturned that way.
-
----
-
-## Security
-
-Report vulnerabilities privately: **[SECURITY.md](SECURITY.md)**. It also states
-plainly what the design already assumes, so nobody wastes time reporting a
-deliberate decision.
-
----
-
-## License
-
-[AGPL-3.0-only](LICENSE).
-
-You may use, modify and self-host this freely. If you run a modified version as a
-network service, that version's source must be made available to its users.
-
-This is deliberate: it keeps anyone from taking this, closing it, and charging
-per employee for it.
-
-Known cost: some companies' legal departments refuse AGPL outright, so adoption
-will be lower than under MIT. That trade is accepted.
-
----
-
-## Project status and support
-
-This project is maintained by one person, as a piece of work and a technical
-argument.
-
-- No hosted service
-- No SLA
-- No promised release cadence
-- No phone support, site visits, or free deployment assistance
-
-Companies using it are responsible for their own deployment, backups, security
-configuration and operation.
-
-Issues are welcome: reproducible bugs, security problems, documentation
-improvements, and generally useful feature proposals. Customisation for a
-specific company, unpaid deployment work, and committed fix dates are not things
-this project can offer.
-
-**PRs are welcome.**
+This is maintained by an individual as a project and technical demonstration.
+There is no official hosting, SLA or individual free installation service.
+Reproducible bugs, documentation improvements, generally useful feature proposals
+and pull requests are welcome.

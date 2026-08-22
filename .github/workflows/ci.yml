@@ -186,14 +186,43 @@ jobs:
         run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
 
   container:
-    name: Production container build
+    name: Production container
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v7
 
-      # This catches missing runtime files and failures in the PostgreSQL 18
-      # client layer before an operator discovers them during deployment.
-      - name: Build the production image
-        run: docker build --tag atarimae:ci .
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Generate deployment configuration
+        run: node scripts/setup-env.mjs
+
+      # Exercise the public one-command path, not only `docker build`. The app
+      # must apply migrations itself and become healthy without an operator
+      # entering the container between those two events.
+      - name: Start the production stack
+        run: docker compose up -d --build
+
+      - name: Verify automatic migrations and health
+        run: |
+          app_container="$(docker compose ps -q app)"
+          test -n "$app_container"
+          for attempt in {1..60}; do
+            status="$(docker inspect --format='{{.State.Health.Status}}' "$app_container")"
+            [ "$status" = healthy ] && break
+            sleep 2
+          done
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$app_container")" = healthy
+          docker compose exec -T app node scripts/db.mjs status | tee migration-status.txt
+          grep -F "0 pending." migration-status.txt
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop the production stack
+        if: always()
+        run: docker compose down --volumes

@@ -61,7 +61,7 @@ export default defineConfig({
   globalSetup: "./fixtures/global-setup.ts",
 
   // Artifacts here double as promotional material: the acceptance scenario is
-  // also the demo recording. See docs/architecture for the M1/M2 script.
+  // also the demo recording. See docs/architecture for the acceptance script.
   reporter: isCI
     ? [["github"], ["html", { open: "never" }]]
     : [["list"], ["html", { open: "never" }]],
@@ -80,7 +80,7 @@ export default defineConfig({
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },
       // The PWA has its own project below, against the production build.
-      testIgnore: /pwa\.spec\.ts$/,
+      testIgnore: /pwa-offline\.spec\.ts$/,
     },
     {
       // The product rule is that phone and PC are not two different products.
@@ -89,7 +89,7 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
       // Pure API scenarios are viewport-independent. Running them under both
       // projects would repeat identical assertions against one shared database.
-      testIgnore: /acceptance\.spec\.ts$|pwa\.spec\.ts$/,
+      testIgnore: /administrator-management-api\.spec\.ts$|pwa-offline\.spec\.ts$/,
     },
     {
       /**
@@ -101,7 +101,7 @@ export default defineConfig({
        * width: what is being proved is offline behaviour, not layout.
        */
       name: "pwa",
-      testMatch: /pwa\.spec\.ts$/,
+      testMatch: /pwa-offline\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: `http://127.0.0.1:${PREVIEW_PORT}` },
     },
   ],

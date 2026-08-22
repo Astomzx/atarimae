@@ -1,8 +1,8 @@
-# What the M6a security pass found
+# What the security review found
 
 One real defect, one absence, and one piece of debt that a comment had already
 admitted to. Each with the test that now prevents it, in the style of
-`m0-regressions.md`.
+`foundational-regressions.md`.
 
 ## 1. The sign-in rate limit could be bypassed with a header
 
@@ -126,7 +126,7 @@ invalid one is refused before it can.
 
 **The debt.** `app.ts` skips the rate limit plugin entirely when
 `NODE_ENV=test`, with a comment ending "Rate limiting gets dedicated coverage in
-M6." That skip is necessary — the suite signs in dozens of times against a
+the security work." That skip is necessary — the suite signs in dozens of times against a
 ten-attempt budget — but it meant every rate limit in the product was configured
 and never once exercised.
 

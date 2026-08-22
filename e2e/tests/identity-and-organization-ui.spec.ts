@@ -3,9 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { resetDatabase } from "../fixtures/database.js";
 
 /**
- * M1 through the actual interface.
+ * Identity and organisation management through the actual interface.
  *
- * The API scenario in m1-acceptance.spec.ts proves the server is correct. This
+ * The API scenario in administrator-management-api.spec.ts proves the server is correct. This
  * one proves the *client* is, which is a different question: a bug shipped
  * here while every server test stayed green, because nothing exercised the
  * browser's fetch wrapper.
@@ -82,7 +82,7 @@ async function addMember(
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M1 through the interface", () => {
+test.describe("identity and organisation through the interface", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });

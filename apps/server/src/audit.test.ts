@@ -8,7 +8,7 @@ import { SESSION_COOKIE } from "./lib/session.js";
 /**
  * Reading the audit log.
  *
- * The table was written to from M0 and read by nothing, which made
+ * The table was written to from the foundation and read by nothing, which made
  * `security.md`'s answer to a hostile administrator — "the audit log records
  * that they did" — a promise nobody could collect on without `psql`.
  *

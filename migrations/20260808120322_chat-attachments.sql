@@ -1,6 +1,6 @@
 -- chat-attachments
 --
--- M6a, brought forward: chat-core created message_attachments with a NOT NULL
+-- Added with attachment security: chat-core created message_attachments with a NOT NULL
 -- message_id, which assumed a file could only exist once its message did. That
 -- is the wrong order. Somebody picks a file, waits for it to upload, and only
 -- then finishes typing — so the row has to exist before the message does.

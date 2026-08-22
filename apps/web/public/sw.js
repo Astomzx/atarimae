@@ -241,7 +241,7 @@ self.addEventListener("fetch", (event) => {
    * Attachments live under /api too, so private files are never written to a
    * cache that outlives the session either.
    *
-   * One exception, added in M6a after an explicit decision recorded in
+   * One exception, added after an explicit decision recorded in
    * `docs/architecture/reconsidering.md`: announcements may be read offline,
    * because a driver in a basement currently sees nothing at all and
    * yesterday's roster clearly stamped with when it was fetched is better than

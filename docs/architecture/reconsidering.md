@@ -129,7 +129,7 @@ carries everything else". An embedded SDK reverses that: the vendor's JavaScript
 runs on every page of your announcement board, and swapping providers stops
 being a settings change.
 
-**What overturning costs.** It would also require relaxing the CSP that M6a just
+**What overturning costs.** It would also require relaxing the CSP that the security review
 established — `frame-src 'none'` and `script-src 'self'` both exist for reasons
 written down in `security.md`, and the frame one guards acknowledgement against
 clickjacking.
@@ -199,10 +199,10 @@ rather than only by another Owner.
 
 |                                     | Recommendation                                       |
 | ----------------------------------- | ---------------------------------------------------- |
-| 1. Offline reading of announcements | **Done** (M6a) — unmissable fetch time, E2E-enforced |
+| 1. Offline reading of announcements | **Done** — unmissable fetch time, E2E-enforced       |
 | 2. Account lockout                  | Keep; notify instead of locking                      |
-| 3. Backup over HTTP                 | **Done** (M6a) — Owner + password + audited          |
-| 4. Encrypting the archive           | **Done** (M6a) — `--encrypt-to`, no key held here    |
+| 3. Backup over HTTP                 | **Done** — Owner + password + audited                |
+| 4. Encrypting the archive           | **Done** — `--encrypt-to`, no key held here          |
 | 5. Embedding the call room          | **Done** — opt-in per provider; the CSP moved by one |
 | 6. Hostile administrator            | Keep; show people their own audit trail              |
 

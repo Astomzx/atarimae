@@ -39,7 +39,7 @@
     "desktop:test": "cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml",
     "desktop:icons": "node apps/desktop/scripts/make-icons.mjs"
   },
-  "//dependencies": "Migrations are run by the operator inside the container — `docker compose exec app node scripts/db.mjs up` — so the migration runner ships in the production image. As devDependencies they were pruned by the --prod install and that documented step failed with ERR_MODULE_NOT_FOUND.",
+  "//dependencies": "The container applies pending migrations before starting the server, so the migration runner ships in the production image. As devDependencies they were pruned by the --prod install and startup would fail with ERR_MODULE_NOT_FOUND.",
   "dependencies": {
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.22.0"

@@ -117,9 +117,9 @@ exactly like a bug for about a minute.
 
 ---
 
-## 4. Every documented backup command was unrunnable (found by the M6a build)
+## 4. Every documented backup command was unrunnable
 
-Not from the first build — from the second, when M6a added backup and restore
+Not from the first build — from the second, when backup and restore support
 and the image gained a `postgresql-client-18` layer to support them.
 
 `docs/deployment/docker.md` told operators to run:
@@ -162,7 +162,7 @@ From the first build:
 - Attachments and database data are on named volumes, as
   `docs/architecture/attachments.md` requires.
 
-Added by the M6a build:
+Added by the backup and security work:
 
 - `pg_dump` and `psql` are present and are 18.6 from PGDG, not bookworm's 15.
 - `packages/backup` is in the image and resolves its own `pg` dependency —

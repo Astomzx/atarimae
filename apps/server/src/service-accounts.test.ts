@@ -7,7 +7,7 @@ import { bearerToken, generateApiToken, hashApiToken } from "./lib/api-token.js"
 import { SESSION_COOKIE } from "./lib/session.js";
 
 /**
- * M5: service accounts and API tokens.
+ * Service accounts and API tokens.
  *
  * The claims being proved: a token is stored as a hash and never recoverable,
  * revoking or disabling takes effect on the next request, a token cannot mint

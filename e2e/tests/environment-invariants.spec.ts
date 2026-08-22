@@ -9,7 +9,7 @@ import { PREVIEW_PORT, WEB_PORT } from "../fixtures/ports.js";
 import { assertServersUseDatabase } from "../fixtures/server-identity.js";
 
 /**
- * Regression guards for environment-level failures found during M0.
+ * Regression guards for environment-level failures found during foundation work.
  *
  * These assert on repository configuration rather than on application
  * behaviour, which is unusual for a Playwright spec — but this is exactly the

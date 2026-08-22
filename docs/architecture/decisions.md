@@ -1,4 +1,4 @@
-# Technical decisions (M0)
+# Technical decisions
 
 Decisions made while building the foundation, and why. Product and data-model
 decisions live in the specification documents; this file covers the toolchain.

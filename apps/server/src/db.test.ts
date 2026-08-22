@@ -15,7 +15,7 @@ afterAll(async () => {
 });
 
 /**
- * M0 regression: a database created without an explicit locale gets
+ * Regression: a database created without an explicit locale gets
  * `Japanese_Japan.936` (CP932) on a Japanese Windows host and something else
  * inside a Linux container. Collation decides ORDER BY results, index
  * behaviour, and which values a unique index treats as equal — so development

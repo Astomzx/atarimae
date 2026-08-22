@@ -143,7 +143,7 @@ not begin with `EF BB BF`, and that the generator uses `writeFileSync`.
 
 ---
 
-## 7. A synchronous Fastify hook hangs the request forever (M1)
+## 7. A synchronous Fastify hook hangs the request forever
 
 `requireAuth` was written as an ordinary synchronous function:
 
@@ -174,7 +174,7 @@ authenticated suite rather than one assertion.
 
 ---
 
-## 8. A JSON content-type on every request, including those with no body (M1)
+## 8. A JSON content-type on every request, including those with no body
 
 The browser API client set one header unconditionally:
 
@@ -200,13 +200,13 @@ change.
 
 **Fix**: set `content-type` only when there is a body.
 
-**Guarded by**: `e2e/tests/m1-ui.spec.ts` — drives the real interface with real
+**Guarded by**: `e2e/tests/identity-and-organization-ui.spec.ts` — drives the real interface with real
 client code, and deliberately covers the empty-bodied writes (sign-out, disable,
 restore) rather than only the ones that send JSON.
 
 ---
 
-## 9. Sign-out that left the previous user on screen (M1)
+## 9. Sign-out that left the previous user on screen
 
 Even once the request succeeded, sign-out did this:
 
@@ -226,13 +226,13 @@ sits down next.
 **Fix**: `window.location.assign("/login")` — a full page load, in `onSettled`
 so it happens whether or not the request succeeded.
 
-**Guarded by**: `e2e/tests/m1-ui.spec.ts` — asserts after sign-out that
+**Guarded by**: `e2e/tests/identity-and-organization-ui.spec.ts` — asserts after sign-out that
 `/auth/me` returns 401 _and_ that a protected route renders the sign-in screen
 rather than stale content.
 
 ---
 
-## 10. `removeAdditional: "all"` silently breaks every union body (M2)
+## 10. `removeAdditional: "all"` silently breaks every union body
 
 The server's ajv was configured with:
 
@@ -260,7 +260,7 @@ loses `orgUnitId`, then matches no branch, and comes back as:
 
 The error accuses the client of sending exactly what it did send. Every
 union-bodied request was rejected, and setting targets — the step everything
-else in M2 depends on — could not succeed at all.
+else in announcement publishing depends on — could not succeed at all.
 
 It was found only because a test helper was made to fail loudly on a
 non-200 from `setTargets`. Without that, thirteen tests failed three
@@ -276,7 +276,7 @@ immediately.
 
 ---
 
-## 11. A named schema used twice in one response (M2)
+## 11. A named schema used twice in one response
 
 TypeBox schemas carrying `$id` become `$ref` components. `AnnouncementDetail`
 referenced `ContentRevisionSummary` twice — once for the current revision, once

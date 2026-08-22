@@ -13,7 +13,7 @@ import {
 import { endAbandonedCalls } from "./services/call-sweep.js";
 
 /**
- * M5: 通話 — calls over the network, inside a conversation.
+ * 通話 — calls over the network, inside a conversation.
  *
  * The claims: the room is generated and not guessable, one channel has one
  * live call however many people press the button, joining re-checks membership

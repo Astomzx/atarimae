@@ -12,7 +12,7 @@ import { requireAuth, requirePersonRole } from "../plugins/auth.js";
 /**
  * Reading the audit log.
  *
- * The table has been written to since M0 and read by nothing at all — no
+ * The table was written to from the foundation and read by nothing at all — no
  * query, no route, no screen. `security.md` offered "the audit log records
  * that they did" as the answer to a hostile administrator, and collecting on
  * that promise required `psql` on the host.

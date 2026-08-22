@@ -1,6 +1,6 @@
 -- webhooks
 --
--- M5: telling another system that something happened here.
+-- Telling another system that something happened here.
 --
 -- The delivery half is a transactional outbox, exactly like notifications and
 -- for the same reason: the row is written in the same transaction as the thing

@@ -13,7 +13,7 @@ import {
 import { deliverPendingWebhooks } from "./services/webhooks.js";
 
 /**
- * M5: outbound webhooks.
+ * Outbound webhooks.
  *
  * The claims: an event is queued in the same transaction as the change it
  * describes, the signature we send is one a receiver can verify, a failure is

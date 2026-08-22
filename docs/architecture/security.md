@@ -109,7 +109,7 @@ budget once they have signed in.
 
 **Which makes `request.ip` a security-relevant value, and it is only as
 trustworthy as the header it comes from.** See `TRUSTED_PROXY_IPS` below, and
-`docs/engineering/m6a-security.md` for the defect that made this section exist.
+`docs/engineering/security-review.md` for the defect that made this section exist.
 
 Rate limiting is skipped when `NODE_ENV=test`, because the rest of the suite
 signs in dozens of times. `rate-limit.test.ts` builds its own app with that skip

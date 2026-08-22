@@ -5,7 +5,7 @@ import { pwa, shouldRegister } from "./pwa.js";
 /**
  * The parts of the service worker's app side that are decisions rather than
  * browser plumbing. Everything the worker itself does is proved end to end in
- * `e2e/tests/m4-pwa.spec.ts`, against a real browser with the network cut.
+ * `e2e/tests/pwa-offline.spec.ts`, against a real browser with the network cut.
  */
 
 describe("shouldRegister", () => {

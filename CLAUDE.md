@@ -92,45 +92,34 @@ docs/deployment     Docker
 Only top-level request/response schemas carry `$id`. A named schema referenced
 twice inside one response breaks Fastify's serializer.
 
-## Status
+## Implemented product areas
 
-| Milestone                                                        | State |
-| ---------------------------------------------------------------- | ----- |
-| M0 foundation                                                    | done  |
-| M1 accounts, org units, permissions                              | done  |
-| M2 announcements, per-person content, acknowledgement, SMTP, CSV | done  |
-| M3a chat                                                         | done  |
-| M4 PWA + Tauri                                                   | done  |
-| M5 open API, webhooks, 通話 providers                            | done  |
-| M6a security, attachments, backup/restore                        | done  |
-| M6b documentation, release (0.0.1)                               | done  |
+Identity and organisation management; announcements, personal content,
+acknowledgement, SMTP and CSV; chat; PWA and Tauri; OpenAPI, webhooks and 通話;
+security, attachments, backup and restore; documentation and release packaging.
 
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
 18 desktop (Rust), 158 E2E, 11 migrations. CI green.
 
-## Suggested order from here
+## Product state
 
-**0.0.1 is out, and the repository is public.** M6b closed with the
-documentation and the release; screenshots and the demo video were deliberately
-deferred rather than blocking it, and they are the first thing to add.
+The public repository now presents one complete product rather than its build
+milestones. `README.md` is Japanese and primary, `README.en.md` is the matching
+English version, and both include administrator/member screenshots at PC and
+phone widths. **Two languages, not three.** Keep the pair in step; if they ever
+disagree, the Japanese one is authoritative.
 
-The README is done: `README.md` is Japanese and primary, `README.en.md` is the
-full English version, and they link to each other. **Two languages, not three**
-— the author's standing instruction is that repository documentation is Japanese
-and English. Keep the pair in step; if they ever disagree, the Japanese one is
-the one the author reads and therefore the one that is right.
+Docker startup applies pending migrations before the server accepts traffic.
+New installs, restarts and upgrades therefore share one command:
+`docker compose up -d --build`. A migration failure must keep the application
+stopped and visible in the app logs.
 
-What is left, in no particular order:
+Extended chat features — editing, deletion, reactions, search and threads — remain
+deliberately out of scope until after v1.0. The two items still standing in
+`reconsidering.md` retain their smaller honest alternatives.
 
-1. **Screenshots and the demo video** — the 画面 / Screenshots section in both
-   READMEs is where they go.
-2. **M3b chat** — editing, deletion, reactions, search, threads. All
-   deliberately out of scope until after v1.0.
-3. The two items still standing in `reconsidering.md`, each with a smaller
-   honest alternative already written down.
-
-M6a is done. `docs/architecture/security.md` is what was defended and what was
-not; `docs/engineering/m6a-security.md` is what the pass found.
+`docs/architecture/security.md` is what was defended and what was not;
+`docs/engineering/security-review.md` is what the review found.
 
 **`TRUSTED_PROXY_IPS` is new and matters.** `request.ip` is what the sign-in
 rate limit is keyed on and what `audit_logs` records, so `X-Forwarded-For` is
@@ -221,7 +210,7 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   destroys every uploaded file while the database keeps the rows pointing at
   them. Also: no virus scanning — the rules verify what a file _is_, not
   whether its contents are hostile. See `docs/architecture/attachments.md`.
-- **Chat is deliberately incomplete** (M3b, after v1.0): no editing,
+- **Chat is deliberately focused** (extended features are after v1.0): no editing,
   deletion, reactions, link previews, search, threads, presence or typing
   indicators. The interface matches the backend's scope exactly — nothing there
   is stubbed or disabled.
@@ -235,14 +224,9 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   the member list into the `@<uuid>` the server resolves; a name typed by hand
   stays plain text. Two members sharing a display name makes the conversion
   ambiguous, and the composer refuses rather than guessing.
-- **Screenshots and the demo video need the author.** The browser pane here
-  cannot take screenshots. `e2e/tests/m2-ui.spec.ts` is the shot list —
-  Playwright can record video by setting `video: "on"` in the config. Both
-  READMEs have a 画面 / Screenshots section that says plainly that there are
-  none yet and points at the acceptance specs instead; that section is where
-  the images go.
-- **The repository is private.** The plan is to make it public after M2, which
-  is now done; the timing is the author's call.
+- **The demo video is still optional.** The screenshots now cover administrator
+  and member flows at PC and phone widths. If a video is added later,
+  `e2e/tests/announcements-ui.spec.ts` remains the useful shot list.
 
 ## Where the interesting reading is
 
@@ -260,10 +244,10 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   provider may point inside the network when a webhook may not
 - `docs/architecture/security.md` — why clickjacking, of all things, is the
   attack this product actually has to care about
-- `docs/engineering/m0-regressions.md` — eleven real defects, each with the test
+- `docs/engineering/foundational-regressions.md` — eleven real defects, each with the test
   that now prevents it. Most share one shape: the system reported success while
   doing nothing.
-- `docs/engineering/m6a-security.md` — the sign-in rate limit that could be
+- `docs/engineering/security-review.md` — the sign-in rate limit that could be
   bypassed with one header, and the two absences beside it.
 - `docs/engineering/embedded-call-room.md` — a host that was still a placeholder
   reaching a CSP header, and the two things a browser will not tell you about a
@@ -271,7 +255,7 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
 - `docs/engineering/shared-test-database.md` — two checkouts on one database,
   and how long it takes to notice that the measurement is the thing that is
   broken.
-- `docs/engineering/m3a-interface.md` — what building the chat interface found,
+- `docs/engineering/chat-interface.md` — what building the chat interface found,
   and the hazards it was written against.
 - `docs/engineering/docker-first-build.md` — three defects the first-ever image
   build found, including one that produced a healthy container with no tables.

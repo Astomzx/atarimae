@@ -1,6 +1,6 @@
 -- service-accounts-and-api-tokens
 --
--- M5: something other than a person can use the API.
+-- Something other than a person can use the API.
 --
 -- The alternative was a personal access token — a token that acts as whoever
 -- created it. That fails the day they leave: the account is disabled, and the

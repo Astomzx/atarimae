@@ -1,6 +1,6 @@
 -- call-providers
 --
--- M5: 通話 — voice and video calls over the network, the way LINE and WeChat
+-- 通話 — voice and video calls over the network, the way LINE and WeChat
 -- do them. Not telephone calls.
 --
 -- Atarimae does not carry the media and is not going to. Running an SFU is a

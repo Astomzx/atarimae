@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resetDatabase } from "../fixtures/database.js";
 
 /**
- * M2 through the interface — the demo script, executable.
+ * Announcements through the interface — the demo script, executable.
  *
  *   Owner creates 第一営業所 and two members
  *     -> writes tomorrow's shared plan
@@ -47,7 +47,7 @@ async function signOut(page: Page) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M2: tomorrow's plan, per person", () => {
+test.describe("tomorrow's plan, per person", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });

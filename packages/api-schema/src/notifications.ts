@@ -5,7 +5,7 @@ import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 /**
  * Reading your own notifications.
  *
- * The table has been written to since M2 and read by nothing — the same shape
+ * The table has been written to since announcement delivery was introduced and read by nothing — the same shape
  * as the audit log. It is added now because the desktop client needs it:
  * WebView2 refuses a Web Push subscription and has never implemented the
  * Notification API, so the only way a Windows client can raise a native

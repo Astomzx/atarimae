@@ -5,7 +5,7 @@ that turned out to be a misreading. Building it found one real defect, one
 browser fact that changes the interface, and one place where the same rule was
 about to be written down twice.
 
-Each with the test that now prevents it, in the style of `m0-regressions.md`.
+Each with the test that now prevents it, in the style of `foundational-regressions.md`.
 
 ## 1. A placeholder host reached the CSP without complaint
 
@@ -86,7 +86,7 @@ Three consequences, all of them visible in the interface:
 **The guard.** `callRoom.test.ts` covers the four-way decision — frame, window,
 link, navigate — as a pure function, including both directions of the race
 between what the client guessed and what the server answered. The interface half
-is in `m5-calls.spec.ts` test 8: a frame with `camera` and `microphone` in its
+is in `calls-ui.spec.ts` test 8: a frame with `camera` and `microphone` in its
 `allow`, no window opened, and the way out on screen.
 
 ## 3. Two spellings of "the default provider"

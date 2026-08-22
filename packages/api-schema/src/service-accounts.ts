@@ -4,7 +4,7 @@ import { DisplayName } from "./auth.js";
 import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 
 /**
- * M5: service accounts and API tokens.
+ * Service accounts and API tokens.
  *
  * A service account is what an integration signs in as. The alternative — a
  * token belonging to a person — fails the day that person leaves: the account

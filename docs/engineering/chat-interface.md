@@ -1,6 +1,6 @@
-# M3a chat interface — what running it found
+# Chat interface — what running it found
 
-Same rule as [m0-regressions.md](m0-regressions.md): defects that surfaced only
+Same rule as [foundational-regressions.md](foundational-regressions.md): defects that surfaced only
 when something was actually run, each naming the test that now prevents it.
 
 The chat backend was finished and tested before any of this existed, so nothing
@@ -53,9 +53,9 @@ still in flight. It passed when the spec was run alone and failed in the full
 suite, which is the shape of a race that eventually fails in CI instead.
 
 **Fix**: the spec's `signOut` helper waits for the login form before returning,
-matching the M2 spec, which had already solved this.
+matching the announcement spec, which had already solved this.
 
-**Guarded by**: `e2e/tests/m3a-ui.spec.ts` — `signOut` is the only way the spec
+**Guarded by**: `e2e/tests/chat-ui.spec.ts` — `signOut` is the only way the spec
 leaves a session, and it asserts the login form is visible.
 
 ---
@@ -78,7 +78,7 @@ one had just stopped being able to keep it.
 page already scrolls to the newest message on arrival, so it is in view exactly
 when there is something to answer.
 
-**Guarded by**: `e2e/tests/m3a-ui.spec.ts` — the reply and attachment scenarios
+**Guarded by**: `e2e/tests/chat-ui.spec.ts` — the reply and attachment scenarios
 run at both widths, which is what turned a desktop-only assumption into a
 failing test rather than a bug report.
 

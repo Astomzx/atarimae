@@ -1,11 +1,11 @@
 # Announcement model (frozen)
 
 Status: **frozen**. Field names, state semantics and transaction boundaries in
-this document are settled. Changing anything here after M1 migrations exist
+this document are settled. Changing anything here after the migrations exist
 means rewriting foreign keys and indexes, so changes require an explicit
 decision recorded at the bottom of this file.
 
-This is the construction drawing for M1 and M2. It defines what the database
+This is the construction drawing for identity, organisation and announcements. It defines what the database
 looks like, what each command is allowed to do, and — equally important — what
 is forbidden.
 
@@ -56,7 +56,7 @@ demand placed on one recipient for one exact content combination.
 `announcement_personalizations` is keyed by `(announcement_id, user_id)` and
 **never references a recipient**.
 
-The reason is a hard ordering constraint: the M2 editor requires the
+The reason is a hard ordering constraint: the announcement editor requires the
 administrator to expand a department, type per-person content, import CSV and
 save a draft — all of which happen _before_ publish, and recipients do not exist
 until publish. Keying personalization to a recipient would leave that content

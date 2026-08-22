@@ -5,7 +5,7 @@ import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 
 /**
- * The coverage `app.ts` promised M6.
+ * The coverage promised by `app.ts`.
  *
  * Rate limiting is skipped when NODE_ENV is "test", because the rest of the
  * suite signs in dozens of times and the per-route budget on sign-in is ten

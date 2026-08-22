@@ -3,7 +3,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { resetDatabase } from "../fixtures/database.js";
 
 /**
- * M3a through the interface.
+ * Chat through the interface.
  *
  *   Owner opens a channel for the branch and writes to it
  *   田中 finds it, joins, and answers
@@ -64,7 +64,7 @@ async function openAs(browser: Browser, email: string, password: string) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M3a: talking to each other", () => {
+test.describe("talking to each other", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });

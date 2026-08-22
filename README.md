@@ -36,6 +36,18 @@
 
 <img src="docs/screenshots/admin-announcement-mobile.png" alt="スマートフォン幅の管理者画面。公告の本文、宛先、個人ごとの内容" width="390">
 
+#### 一対一チャット
+
+![管理者から見たメンバーとの一対一チャット。会話履歴、通話履歴、返信、添付](docs/screenshots/admin-direct-chat-desktop.png)
+
+<img src="docs/screenshots/admin-direct-chat-mobile.png" alt="スマートフォン幅の管理者画面。メンバーとの一対一チャット" width="390">
+
+#### 通話
+
+![管理者から開始した一対一通話。参加人数、通話に戻る、退出](docs/screenshots/admin-call-desktop.png)
+
+<img src="docs/screenshots/admin-call-mobile.png" alt="スマートフォン幅の管理者画面。メンバーとの一対一通話" width="390">
+
 ### メンバー
 
 ![メンバーのホーム。確認が必要なお知らせとシステム状態。管理機能は表示されない](docs/screenshots/member-home-desktop.png)
@@ -43,6 +55,18 @@
 ![メンバーに届いた公告。共通本文、自分だけの担当、確認ボタン](docs/screenshots/member-announcement-desktop.png)
 
 <img src="docs/screenshots/member-announcement-mobile.png" alt="スマートフォン幅のメンバー画面。共通本文、自分だけの担当、確認ボタン" width="390">
+
+#### 一対一チャット
+
+![メンバーから見た管理者との一対一チャット。会話履歴、返信、添付](docs/screenshots/member-direct-chat-desktop.png)
+
+<img src="docs/screenshots/member-direct-chat-mobile.png" alt="スマートフォン幅のメンバー画面。管理者との一対一チャット" width="390">
+
+#### 通話
+
+![メンバーが参加した管理者との一対一通話。参加人数、通話に戻る、退出](docs/screenshots/member-call-desktop.png)
+
+<img src="docs/screenshots/member-call-mobile.png" alt="スマートフォン幅のメンバー画面。管理者との一対一通話" width="390">
 
 ![オーナー、管理者、メンバーと第一営業所への所属](docs/screenshots/members-desktop.png)
 

@@ -101,6 +101,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Node handles SIGTERM itself; the server closes in-flight requests on it, so
-# a deploy cannot abort a publish transaction midway.
-CMD ["node", "apps/server/dist/server.js"]
+# Apply pending migrations before accepting traffic. `db.mjs up` is idempotent,
+# so first installs, ordinary restarts and upgrades all use the same command.
+# `exec` replaces the shell with Node after migration, preserving direct
+# SIGTERM delivery and the server's graceful shutdown behaviour.
+CMD ["sh", "-c", "node scripts/db.mjs up --quiet && exec node apps/server/dist/server.js"]

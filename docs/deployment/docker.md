@@ -18,7 +18,7 @@ older PostgreSQL fails on the first migration with an explicit message —
 
 ---
 
-## 1. Get the source
+## Quick start
 
 ```bash
 git clone https://github.com/Astomzx/atarimae.git
@@ -27,8 +27,6 @@ git clone https://github.com/Astomzx/atarimae.git
 ```bash
 cd atarimae
 ```
-
-## 2. Generate configuration
 
 ```bash
 node scripts/setup-env.mjs
@@ -48,7 +46,7 @@ PUBLIC_ORIGIN=https://atarimae.example.co.jp
 for CORS and for the links inside notification emails, so an incorrect value
 produces mail nobody can act on.
 
-### Back up the encryption key now
+### Back up the encryption key
 
 `.env` contains `ENCRYPTION_KEY_CURRENT`. Losing it permanently destroys every
 stored external credential — currently the SMTP password.
@@ -56,21 +54,16 @@ stored external credential — currently the SMTP password.
 Store it somewhere that is **not** your database backup. A backup containing
 both the ciphertext and the key protects nothing.
 
-## 3. Start
-
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-## 4. Create the database schema
+The application waits for PostgreSQL, applies every pending migration and only
+then starts accepting traffic. The same command is used for a new installation,
+an ordinary restart and an upgrade. If a migration fails, the application does
+not start in a half-updated state; inspect it with `docker compose logs app`.
 
-```bash
-docker compose exec app node scripts/db.mjs up
-```
-
-Expect a list of applied migrations ending in `Migrations complete!`.
-
-## 5. Create the first Owner
+## First sign-in
 
 Open `PUBLIC_ORIGIN` in a browser. The first-run screen asks for a name, an
 email address and a password.
@@ -157,22 +150,13 @@ Nothing else. No per-message chat mail, no digests.
 
 ```bash
 git pull
+docker compose up -d --build
 ```
 
-```bash
-docker compose build
-```
-
-```bash
-docker compose up -d
-```
-
-```bash
-docker compose exec app node scripts/db.mjs up
-```
-
-Always run migrations after updating. `db.mjs up` is safe to run when there is
-nothing to do.
+Pending migrations run automatically before the updated server starts. If one
+fails, the application remains stopped instead of serving new code against an
+incomplete schema; inspect the app logs, correct the cause and run the same
+command again.
 
 Check what would run first:
 

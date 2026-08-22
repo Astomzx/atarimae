@@ -108,26 +108,22 @@ twice inside one response breaks Fastify's serializer.
 496 server unit tests, 74 web unit tests, 47 backup, 20 secret-store,
 18 desktop (Rust), 158 E2E, 11 migrations. CI green.
 
-## Suggested order from here
+## Product state
 
-**0.0.1 is out, and the repository is public.** M6b closed with the
-documentation and the release; screenshots and the demo video were deliberately
-deferred rather than blocking it, and they are the first thing to add.
+The public repository now presents one complete product rather than its build
+milestones. `README.md` is Japanese and primary, `README.en.md` is the matching
+English version, and both include administrator/member screenshots at PC and
+phone widths. **Two languages, not three.** Keep the pair in step; if they ever
+disagree, the Japanese one is authoritative.
 
-The README is done: `README.md` is Japanese and primary, `README.en.md` is the
-full English version, and they link to each other. **Two languages, not three**
-— the author's standing instruction is that repository documentation is Japanese
-and English. Keep the pair in step; if they ever disagree, the Japanese one is
-the one the author reads and therefore the one that is right.
+Docker startup applies pending migrations before the server accepts traffic.
+New installs, restarts and upgrades therefore share one command:
+`docker compose up -d --build`. A migration failure must keep the application
+stopped and visible in the app logs.
 
-What is left, in no particular order:
-
-1. **Screenshots and the demo video** — the 画面 / Screenshots section in both
-   READMEs is where they go.
-2. **M3b chat** — editing, deletion, reactions, search, threads. All
-   deliberately out of scope until after v1.0.
-3. The two items still standing in `reconsidering.md`, each with a smaller
-   honest alternative already written down.
+M3b chat features — editing, deletion, reactions, search and threads — remain
+deliberately out of scope until after v1.0. The two items still standing in
+`reconsidering.md` retain their smaller honest alternatives.
 
 M6a is done. `docs/architecture/security.md` is what was defended and what was
 not; `docs/engineering/m6a-security.md` is what the pass found.
@@ -235,14 +231,9 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   the member list into the `@<uuid>` the server resolves; a name typed by hand
   stays plain text. Two members sharing a display name makes the conversion
   ambiguous, and the composer refuses rather than guessing.
-- **Screenshots and the demo video need the author.** The browser pane here
-  cannot take screenshots. `e2e/tests/m2-ui.spec.ts` is the shot list —
-  Playwright can record video by setting `video: "on"` in the config. Both
-  READMEs have a 画面 / Screenshots section that says plainly that there are
-  none yet and points at the acceptance specs instead; that section is where
-  the images go.
-- **The repository is private.** The plan is to make it public after M2, which
-  is now done; the timing is the author's call.
+- **The demo video is still optional.** The screenshots now cover administrator
+  and member flows at PC and phone widths. If a video is added later,
+  `e2e/tests/m2-ui.spec.ts` remains the useful shot list.
 
 ## Where the interesting reading is
 

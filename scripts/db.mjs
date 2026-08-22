@@ -37,9 +37,8 @@ const MIGRATIONS_DIR = join(ROOT, "migrations");
  * Loads .env when present, and otherwise trusts the ambient environment.
  *
  * A container has no .env file — its configuration arrives as real environment
- * variables — so insisting on the file would make `docker compose exec app
- * node scripts/db.mjs up` impossible, which is the documented way to run
- * migrations on a deployment.
+ * variables — so insisting on the file would make the container's startup
+ * migration impossible.
  */
 function loadEnv() {
   const envPath = join(ROOT, ".env");
@@ -77,7 +76,7 @@ function targetUrl(useTest, suite = "") {
 /**
  * Only needed by reset/verify, which create and drop databases. A deployment
  * never does either — its database already exists — so this stays optional
- * rather than blocking `db:up` in a container.
+ * rather than blocking the startup migration.
  */
 function adminUrl() {
   const url = process.env.ADMIN_DATABASE_URL;
@@ -85,7 +84,7 @@ function adminUrl() {
     fail(
       "ADMIN_DATABASE_URL is not set.\n\n" +
         "It is only required for creating or dropping databases. On a\n" +
-        "deployment, the database already exists — use `db:up` instead.",
+        "deployment, the database already exists — startup uses `db:up` instead.",
     );
   }
   return url;
@@ -405,13 +404,16 @@ async function main() {
   const useTest = argv.includes("--test") || e2eOnly;
   const createOnly = argv.includes("--create-only");
   const force = argv.includes("--force");
+  // Container startup needs the migration names and result, not every SQL
+  // statement echoed into production logs.
+  const quiet = argv.includes("--quiet");
   const suite = e2eOnly ? "e2e" : "";
   const rest = argv.slice(1).filter((a) => !a.startsWith("--"));
 
   if (!command) {
     console.log(
       "\nUsage: node scripts/db.mjs <new|up|down|redo|status|reset|verify> " +
-        "[--test] [--e2e]\n",
+        "[--test] [--e2e] [--quiet]\n",
     );
     process.exit(1);
   }
@@ -423,7 +425,9 @@ async function main() {
       process.exit(cmdNew(rest[0]));
       break;
     case "up":
-      process.exit(runMigrate(["up"], targetUrl(useTest, suite)));
+      process.exit(
+        runMigrate(quiet ? ["up", "--verbose=false"] : ["up"], targetUrl(useTest, suite)),
+      );
       break;
     case "down":
       process.exit(runMigrate(["down", rest[0] ?? "1"], targetUrl(useTest, suite)));

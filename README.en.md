@@ -139,15 +139,30 @@ desktop-only feature; the E2E suite runs the same scenarios at both.
 
 ## Screenshots
 
-### An announcement: shared body, individual instructions
+These use the same demo data, exercised as an administrator and a member at
+both desktop and phone widths.
 
-![A published announcement with a shared body, branch recipients and individual instructions](docs/screenshots/announcement-desktop.png)
+### Administrator: desktop
 
-### Home: desktop and phone
+![Administrator home with pending acknowledgement, member management, announcement creation and system health](docs/screenshots/admin-home-desktop.png)
 
-![The desktop home page with acknowledgements, members, administration and system health](docs/screenshots/home-desktop.png)
+![Administrator announcement list with creation, recipient count, acknowledgement requirement and publication status](docs/screenshots/admin-announcements-desktop.png)
 
-<img src="docs/screenshots/home-mobile.png" alt="The same home page at phone width, arranged in one column" width="390">
+![Administrator announcement detail with the shared body, recipients, per-person content and acknowledgement status](docs/screenshots/admin-announcement-desktop.png)
+
+### Administrator: phone
+
+<img src="docs/screenshots/admin-announcement-mobile.png" alt="Administrator announcement detail at phone width, showing the body, recipients and per-person content" width="390">
+
+### Member: desktop
+
+![Member home with an announcement awaiting acknowledgement and no administration controls](docs/screenshots/member-home-desktop.png)
+
+![The announcement delivered to a member, with the shared body, only that member's assignment and the acknowledgement button](docs/screenshots/member-announcement-desktop.png)
+
+### Member: phone
+
+<img src="docs/screenshots/member-announcement-mobile.png" alt="The member announcement at phone width, with the shared body, personal assignment and acknowledgement button" width="390">
 
 ### Members and permissions
 

@@ -131,15 +131,30 @@ Atarimae は、その当たり前を当たり前に実装したらどうなる�
 
 ## 画面
 
-### 公告：共通の本文と、一人ずつの指示
+同じデモデータを、管理者とメンバー、PC とスマートフォンのそれぞれで
+実際に操作して撮影しています。
 
-![公開した公告。共通本文、第一営業所の宛先、個人ごとの指示](docs/screenshots/announcement-desktop.png)
+### 管理者：PC
 
-### ホーム：PC とスマートフォン
+![管理者のホーム。確認待ち、メンバー管理、公告作成、システム状態](docs/screenshots/admin-home-desktop.png)
 
-![PC 幅のホーム。確認が必要なお知らせ、メンバー、管理、システム状態](docs/screenshots/home-desktop.png)
+![管理者の公告一覧。公告作成、配信人数、確認要否、公開状態](docs/screenshots/admin-announcements-desktop.png)
 
-<img src="docs/screenshots/home-mobile.png" alt="スマートフォン幅のホーム。同じ機能が縦一列に並ぶ" width="390">
+![管理者の公告詳細。共通本文、宛先、個人ごとの内容、確認状況](docs/screenshots/admin-announcement-desktop.png)
+
+### 管理者：スマートフォン
+
+<img src="docs/screenshots/admin-announcement-mobile.png" alt="スマートフォン幅の管理者画面。公告の本文、宛先、個人ごとの内容" width="390">
+
+### メンバー：PC
+
+![メンバーのホーム。確認が必要なお知らせとシステム状態。管理機能は表示されない](docs/screenshots/member-home-desktop.png)
+
+![メンバーに届いた公告。共通本文、自分だけの担当、確認ボタン](docs/screenshots/member-announcement-desktop.png)
+
+### メンバー：スマートフォン
+
+<img src="docs/screenshots/member-announcement-mobile.png" alt="スマートフォン幅のメンバー画面。共通本文、自分だけの担当、確認ボタン" width="390">
 
 ### メンバーと権限
 

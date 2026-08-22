@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resetDatabase } from "../fixtures/database.js";
 
 /**
- * M5 through the interface: something other than a person uses the API.
+ * Integrations through the interface: something other than a person uses the API.
  *
  *   Owner creates a service account for the dispatch system
  *     -> issues a token, sees it once
@@ -34,7 +34,7 @@ async function signIn(page: Page, email: string, password: string) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M5: an integration of its own", () => {
+test.describe("an integration of its own", () => {
   /** Captured from the one screen that will ever show it. */
   let token = "";
 

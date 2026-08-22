@@ -3,7 +3,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { query, resetDatabase } from "../fixtures/database.js";
 
 /**
- * M1 acceptance scenario.
+ * Administrator-management acceptance scenario.
  *
  * This is the sequence the whole project is an argument for, run end to end
  * against a real server and a real database:
@@ -22,8 +22,8 @@ import { query, resetDatabase } from "../fixtures/database.js";
  * It doubles as the script for the demo recording, so the steps are ordered
  * the way they would be narrated.
  *
- * Runs API-first: the M1 web interface does not exist yet. When it lands, the
- * UI walkthrough becomes a second spec over the same scenario.
+ * Runs API-first so the server contract and the interface remain independently
+ * verified over the same scenario.
  */
 
 const API = "/api/v1";
@@ -69,7 +69,7 @@ async function signIn(
 // one shared database, which is a race waiting to happen.
 test.describe.configure({ mode: "serial" });
 
-test.describe("M1 acceptance: an administrator can add an administrator", () => {
+test.describe("an administrator can add an administrator", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });

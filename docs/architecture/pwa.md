@@ -16,7 +16,7 @@ contradict its own thesis. Two obvious features would do it:
   been superseded — a confirmation of something nobody confirmed.
 
 So the service worker caches the **shell**, plus one deliberate exception added
-in M6a and named below. Everything else carrying meaning goes to the network or
+during the security and offline review and named below. Everything else carrying meaning goes to the network or
 does not happen.
 
 | Request                            | What the worker does                                    |
@@ -118,14 +118,14 @@ never appeared. It sits above the router now.
   it is the build's output, and it costs no dependency.
 - **A classic worker, not a module one.** Module service workers are still
   unsupported on Safari, and iOS is where a PWA matters most.
-- ~~No push notifications.~~ **Wired up.** The tables M2 left unused are now
+- ~~No push notifications.~~ **Wired up.** The previously unused tables are now
   reached: VAPID keys in `system_settings`, aes128gcm encryption in
   `apps/server/src/lib/web-push.ts`, and `push` and `notificationclick`
   handlers in the worker. The payload carries a title, a line of body text and
   a path — never the announcement, because a notification sits on a lock screen
   in a break room. Permission is asked for only when somebody presses the
   button on the device page.
-- ~~No offline reading of announcements.~~ **Reversed in M6a**, deliberately
+- ~~No offline reading of announcements.~~ **Reversed after review**, deliberately
   and with the condition this file set attached — see
   `docs/architecture/reconsidering.md`. A driver in a basement saw nothing at
   all; yesterday's roster, clearly stamped with when it was fetched, beats

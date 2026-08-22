@@ -3,7 +3,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 
 /**
- * M5: 通話 — voice and video calls over the network, as LINE and WeChat do
+ * 通話 — voice and video calls over the network, as LINE and WeChat do
  * them. Not telephone calls.
  *
  * Atarimae does not carry the audio and is not going to: running an SFU is a

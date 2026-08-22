@@ -4,9 +4,9 @@ import { DisplayName } from "./auth.js";
 import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 
 /**
- * M6a: reading the audit log.
+ * Reading the audit log.
  *
- * The table has been written to since M0 and read by nothing. That is a
+ * The table was written to from the foundation and read by nothing. That is a
  * guarantee nobody can inspect, which is close to no guarantee at all —
  * `security.md` offered "the audit log records that they did" as the answer to
  * a hostile administrator, and until now the only way to collect on that

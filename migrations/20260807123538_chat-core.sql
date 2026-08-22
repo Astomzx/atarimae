@@ -1,8 +1,8 @@
 -- chat-core
 --
--- M3a: channels, direct messages, text, attachments, mentions, unread state.
+-- Chat core: channels, direct messages, text, attachments, mentions, unread state.
 --
--- Deliberately NOT here (M3b, after v1.0): editing, deletion, reactions, link
+-- Deliberately NOT here (after v1.0): editing, deletion, reactions, link
 -- previews, full-text search, threads, presence, typing indicators. Chat is the
 -- least differentiated part of this product — every competitor has it — so the
 -- v1.0 scope is what makes it usable, not what makes it complete.
@@ -110,7 +110,7 @@ CREATE TABLE messages (
 
   body        text NOT NULL,
 
-  -- Reply-to is in M3a because a thread of two is how questions actually get
+  -- Reply-to is in the chat core because a thread of two is how questions actually get
   -- answered; full threading is not.
   reply_to_id uuid REFERENCES messages(id),
 

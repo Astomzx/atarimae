@@ -3,7 +3,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { resetDatabase } from "../fixtures/database.js";
 
 /**
- * M5 通話 through the interface — calls over the network, as LINE and WeChat
+ * 通話 through the interface — calls over the network, as LINE and WeChat
  * do them.
  *
  *   Nothing is configured, so pressing 通話 says so instead of failing
@@ -50,7 +50,7 @@ async function openChannel(page: Page) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M5: 通話", () => {
+test.describe("通話", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });

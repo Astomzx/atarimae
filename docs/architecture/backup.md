@@ -1,7 +1,7 @@
 # Backup and restore
 
 An organisation can take its own data and leave. That is one of the three
-claims on the front of this project, and until M6a it was a paragraph in the
+claims on the front of this project, and initially it was only a paragraph in the
 deployment guide telling somebody to run `pg_dump` and not forget the files.
 
 ```bash

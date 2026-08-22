@@ -3,13 +3,13 @@ import { Type, type Static } from "@sinclair/typebox";
 import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 
 /**
- * M3a chat.
+ * Chat.
  *
  * Everything here works identically on phone and desktop — the product rule is
  * that they are not two different products, and chat is where that is easiest
  * to break by accident.
  *
- * Not in v1.0 (M3b): editing, deletion, reactions, link previews, full-text
+ * Not in v1.0: editing, deletion, reactions, link previews, full-text
  * search, threads, presence, typing indicators.
  */
 

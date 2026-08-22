@@ -10,7 +10,7 @@ import { requireAuth } from "../plugins/auth.js";
 /**
  * Reading your own notifications.
  *
- * Written to since M2, read by nothing until now. It is added because the
+ * Written to since announcement delivery was introduced, read by nothing until now. It is added because the
  * desktop client cannot do without it: WebView2 refuses a Web Push
  * subscription and has never implemented the Notification API, so a Windows
  * client can only raise a native notification by asking what is waiting.

@@ -264,7 +264,7 @@ with three sockets where two were asked for.
 
 Closing the leak broke four E2E tests, in both projects, every run. They had been
 passing on the leak — and that was measured here rather than taken on trust: with
-the socket fixed and the two invalidations below removed, `m3a-ui` and `m5-calls`
+the socket fixed and the two invalidations below removed, `chat-ui` and `calls-ui`
 fail exactly four tests, the same four, at both widths.
 
 Every socket invalidates `chatKeys.all` when it opens, so that nothing missed
@@ -284,8 +284,8 @@ That accident was standing in for two invalidations the client genuinely owed:
   straight into it. Same fallback, same reason.
 
 Both are now invalidated where they are caused — `NewConversation` before it
-navigates, `useEnterCall` before the banner does. `m3a-ui.spec.ts` "a one-to-one
-conversation" and `m5-calls.spec.ts` "6. a one-to-one call" cover them, and now
+navigates, `useEnterCall` before the banner does. `chat-ui.spec.ts` "a one-to-one
+conversation" and `calls-ui.spec.ts` "6. a one-to-one call" cover them, and now
 cover them on purpose rather than by accident.
 
 It is worth being plain about what this means: two user-visible bugs survived

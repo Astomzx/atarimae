@@ -3,7 +3,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import { NullableTimestamp, Timestamp, Uuid } from "./common/primitives.js";
 
 /**
- * M5: telling another system that something happened here.
+ * Telling another system that something happened here.
  *
  * The event list is deliberately short. Every event is a promise to keep
  * sending it in that shape, and a webhook nobody uses is a compatibility

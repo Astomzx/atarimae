@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { query, resetDatabase } from "../fixtures/database.js";
 
 /**
- * M4, the PWA half — against the production build, which is the only mode
+ * PWA and offline behaviour — against the production build, which is the only mode
  * where the service worker registers.
  *
  * The installable part is easy and mostly a manifest. The part worth testing
@@ -46,7 +46,7 @@ async function waitForServiceWorker(page: Page) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("M4: installable, and honest offline", () => {
+test.describe("installable, and honest offline", () => {
   test.beforeAll(async () => {
     await resetDatabase();
   });
@@ -156,7 +156,7 @@ test.describe("M4: installable, and honest offline", () => {
       await expect(page.getByTestId("offline-bar")).toContainText("最新ではない可能性");
 
       /*
-       * This assertion was the opposite until M6a, and the reversal was an
+       * This assertion was originally the opposite, and the reversal was an
        * explicit decision — see `docs/architecture/reconsidering.md`. A driver
        * in a basement saw nothing at all, and yesterday's roster clearly
        * stamped with when it was fetched is better than nothing.

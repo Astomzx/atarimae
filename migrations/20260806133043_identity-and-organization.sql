@@ -1,6 +1,6 @@
 -- identity-and-organization
 --
--- M1 data model: users, organisation units, invitations, devices, sessions and
+-- Identity and organisation data model: users, organisation units, invitations, devices, sessions and
 -- the audit log.
 --
 -- Two rules from docs/architecture/announcement-model.md are enforced here at

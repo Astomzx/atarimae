@@ -11,6 +11,8 @@ import {
   OpenDirectRequest,
   SendMessageRequest,
   UploadAttachmentResponse,
+  UpdateChannelMemberMuteRequest,
+  UpdateChannelModerationRequest,
   Uuid,
   type ChannelSummary,
 } from "@atarimae/api-schema";
@@ -19,6 +21,7 @@ import { Type } from "@sinclair/typebox";
 
 import { withTransaction } from "../db.js";
 import { ApiError } from "../errors.js";
+import { AuditAction, writeAudit } from "../lib/audit.js";
 import {
   ALLOWED_TYPES,
   encodeFileName,
@@ -28,7 +31,7 @@ import {
   validateUpload,
   type UploadRejection,
 } from "../lib/attachments.js";
-import { requireAuth } from "../plugins/auth.js";
+import { requireAuth, requireRole } from "../plugins/auth.js";
 import {
   assertCanPost,
   assertCanRead,
@@ -166,13 +169,21 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
         has_mention: boolean;
         last_message_at: string | null;
         last_message_preview: string | null;
+        org_unit_id: string | null;
+        posting_policy: "everyone" | "admins_only";
+        can_post: boolean;
+        can_moderate: boolean;
       }>(
         `WITH me AS (
-           SELECT channel_id, last_read_message_id
+           SELECT channel_id, last_read_message_id, muted_by_admin
              FROM channel_members
             WHERE user_id = $1 AND left_at IS NULL
          )
-         SELECT c.id, c.kind, c.name, c.description, c.created_at,
+         SELECT c.id, c.kind,
+                CASE WHEN c.org_unit_id IS NULL THEN c.name ELSE o.name END AS name,
+                CASE WHEN c.org_unit_id IS NULL THEN c.description ELSE o.description END
+                  AS description,
+                c.created_at, c.org_unit_id, c.posting_policy,
                 (me.channel_id IS NOT NULL) AS is_member,
                 (SELECT count(*) FROM channel_members m
                   WHERE m.channel_id = c.id AND m.left_at IS NULL) AS member_count,
@@ -199,15 +210,23 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
                   AS last_message_at,
                 (SELECT left(msg.body, 80) FROM messages msg
                   WHERE msg.channel_id = c.id ORDER BY msg.id DESC LIMIT 1)
-                  AS last_message_preview
+                  AS last_message_preview,
+                (c.archived_at IS NULL
+                 AND (me.channel_id IS NOT NULL OR (c.org_unit_id IS NOT NULL AND $2))
+                 AND ($2 OR (c.posting_policy = 'everyone'
+                             AND COALESCE(me.muted_by_admin, false) = false))) AS can_post,
+                ($2 AND c.kind <> 'direct'
+                 AND (me.channel_id IS NOT NULL OR c.org_unit_id IS NOT NULL)) AS can_moderate
            FROM channels c
+           LEFT JOIN org_units o ON o.id = c.org_unit_id
            LEFT JOIN me ON me.channel_id = c.id
           WHERE c.archived_at IS NULL
             -- Public channels are listed even when not joined; that is what
             -- makes them discoverable. Everything else requires membership.
-            AND (c.kind = 'public' OR me.channel_id IS NOT NULL)
+            AND (c.kind = 'public' OR me.channel_id IS NOT NULL
+                 OR (c.org_unit_id IS NOT NULL AND $2))
           ORDER BY last_message_at DESC NULLS LAST, c.created_at DESC`,
-        [user.id],
+        [user.id, user.role === "owner" || user.role === "admin"],
       );
 
       return {
@@ -223,6 +242,10 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
           lastMessageAt: row.last_message_at,
           lastMessagePreview: row.last_message_preview,
           isMember: row.is_member,
+          orgUnitId: row.org_unit_id,
+          postingPolicy: row.posting_policy,
+          canPost: row.can_post,
+          canModerate: row.can_moderate,
           createdAt: row.created_at,
         })),
       };
@@ -377,9 +400,11 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
         const { rows } = await client.query<{
           user_id: string;
           display_name: string;
+          role: "owner" | "admin" | "member";
           joined_at: string;
+          muted_by_admin: boolean;
         }>(
-          `SELECT m.user_id, u.display_name, m.joined_at
+          `SELECT m.user_id, u.display_name, u.role, m.joined_at, m.muted_by_admin
              FROM channel_members m
              JOIN users u ON u.id = m.user_id
             WHERE m.channel_id = $1 AND m.left_at IS NULL
@@ -391,10 +416,121 @@ export const chatRoutes: FastifyPluginAsyncTypebox = async (app) => {
           items: rows.map((r) => ({
             userId: r.user_id,
             displayName: r.display_name,
+            role: r.role,
             joinedAt: r.joined_at,
+            muted: r.muted_by_admin,
           })),
         };
       });
+    },
+  );
+
+  app.patch(
+    "/channels/:channelId/moderation",
+    {
+      preHandler: requireRole("admin"),
+      schema: {
+        tags: ["chat"],
+        summary: "Choose who may post in a group channel",
+        params: Type.Object({ channelId: Uuid }),
+        body: UpdateChannelModerationRequest,
+        response: {
+          200: Type.Object({
+            postingPolicy: UpdateChannelModerationRequest.properties.postingPolicy,
+          }),
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = request.user!;
+      const { channelId } = request.params;
+      const { postingPolicy } = request.body;
+
+      await withTransaction(app.db, async (client) => {
+        const { rows } = await client.query<{ kind: ChannelSummary["kind"] }>(
+          "SELECT kind FROM channels WHERE id = $1",
+          [channelId],
+        );
+        const channel = rows[0];
+        if (!channel) throw ApiError.notFound("Channel not found.");
+        if (channel.kind === "direct") {
+          throw new ApiError(
+            422,
+            ChatErrorCode.CHANNEL_NOT_MODERATABLE,
+            "A direct conversation cannot be moderated as a group.",
+          );
+        }
+
+        await client.query("UPDATE channels SET posting_policy = $2 WHERE id = $1", [
+          channelId,
+          postingPolicy,
+        ]);
+        await writeAudit(client, request, {
+          action: AuditAction.CHANNEL_MODERATION_CHANGED,
+          actorUserId: actor.id,
+          resourceType: "channel",
+          resourceId: channelId,
+          metadata: { postingPolicy },
+        });
+      });
+
+      return { postingPolicy };
+    },
+  );
+
+  app.patch(
+    "/channels/:channelId/members/:userId/mute",
+    {
+      preHandler: requireRole("admin"),
+      schema: {
+        tags: ["chat"],
+        summary: "Mute or unmute one member in a group channel",
+        params: Type.Object({ channelId: Uuid, userId: Uuid }),
+        body: UpdateChannelMemberMuteRequest,
+        response: {
+          200: Type.Object({ userId: Uuid, muted: Type.Boolean() }),
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const actor = request.user!;
+      const { channelId, userId } = request.params;
+      const { muted } = request.body;
+
+      await withTransaction(app.db, async (client) => {
+        const { rows } = await client.query<{ kind: ChannelSummary["kind"] }>(
+          "SELECT kind FROM channels WHERE id = $1",
+          [channelId],
+        );
+        const channel = rows[0];
+        if (!channel) throw ApiError.notFound("Channel not found.");
+        if (channel.kind === "direct") {
+          throw new ApiError(
+            422,
+            ChatErrorCode.CHANNEL_NOT_MODERATABLE,
+            "A direct conversation cannot be moderated as a group.",
+          );
+        }
+
+        const { rowCount } = await client.query(
+          `UPDATE channel_members SET muted_by_admin = $3
+            WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
+          [channelId, userId, muted],
+        );
+        if ((rowCount ?? 0) === 0) throw ApiError.notFound("Channel member not found.");
+
+        await writeAudit(client, request, {
+          action: AuditAction.CHANNEL_MEMBER_MUTE_CHANGED,
+          actorUserId: actor.id,
+          resourceType: "channel",
+          resourceId: channelId,
+          metadata: { userId, muted },
+        });
+      });
+
+      return { userId, muted };
     },
   );
 

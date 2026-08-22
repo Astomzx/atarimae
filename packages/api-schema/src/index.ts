@@ -31,9 +31,12 @@ export {
   MessageAttachment,
   MessageBody,
   OpenDirectRequest,
+  PostingPolicy,
   RealtimeEvent,
   SendMessageRequest,
   UploadAttachmentResponse,
+  UpdateChannelMemberMuteRequest,
+  UpdateChannelModerationRequest,
 } from "./chat.js";
 
 export {

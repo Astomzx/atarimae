@@ -54,6 +54,8 @@ export const AuditAction = {
   ORG_UNIT_UPDATED: "org_unit.updated",
   ORG_UNIT_DISABLED: "org_unit.disabled",
   USER_ORG_UNIT_CHANGED: "user.org_unit_changed",
+  CHANNEL_MODERATION_CHANGED: "channel.moderation_changed",
+  CHANNEL_MEMBER_MUTE_CHANGED: "channel.member_mute_changed",
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

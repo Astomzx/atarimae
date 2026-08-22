@@ -691,6 +691,38 @@ body {
   margin: 1rem 0 0;
 }
 
+.chat-moderation {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.chat-moderation > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.chat-moderation__body {
+  margin-top: 1rem;
+}
+
+.chat-moderation__members {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-moderation__members li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .chat__log {
   display: flex;
   flex-direction: column;

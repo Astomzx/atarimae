@@ -408,6 +408,27 @@ test.describe("talking to each other", () => {
     await expect(page.getByTestId("pending-attachments")).toHaveCount(0);
   });
 
+  test("13a. a phone or PC can send an image and show it inline", async ({ page }) => {
+    await signIn(page, TANAKA.email, MEMBER_PASSWORD);
+    await page.goto("/chat");
+    await page.getByTestId(`channel-row-${CHANNEL}`).getByText(CHANNEL).click();
+
+    await page.getByTestId("attach-file").setInputFiles({
+      name: "現場写真.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+    await expect(page.getByTestId("pending-attachments")).toContainText("現場写真.png");
+    await page.getByTestId("send-message").click();
+
+    const last = page.getByTestId("message").last();
+    await expect(last.locator("img.chat__image")).toBeVisible();
+    await expect(last.getByTestId("attachment-link")).toContainText("現場写真.png");
+  });
+
   test("14. a kind of file that is not allowed at all is refused", async ({ page }) => {
     await signIn(page, OWNER.email, OWNER.password);
     await page.goto("/chat");
@@ -429,5 +450,74 @@ test.describe("talking to each other", () => {
 
     await page.getByRole("link", { name: "チャット" }).click();
     await expect(page.getByTestId("channel-list")).toContainText(CHANNEL);
+  });
+
+  test("16. every unit member automatically has the unit group", async ({ page }) => {
+    await signIn(page, TANAKA.email, MEMBER_PASSWORD);
+    await page.goto("/chat");
+
+    await expect(page.getByTestId(`channel-row-${BRANCH}`)).toBeVisible();
+    await page.getByTestId(`channel-row-${BRANCH}`).getByText(BRANCH).click();
+    await expect(page.getByTestId("channel-title")).toHaveText(BRANCH);
+    await expect(page.getByTestId("message-input")).toBeVisible();
+  });
+
+  test("17. an administrator can restrict the group or mute one member", async ({
+    browser,
+    page,
+  }) => {
+    await signIn(page, OWNER.email, OWNER.password);
+    await page.goto("/chat");
+    await page.getByTestId(`channel-row-${BRANCH}`).getByText(BRANCH).click();
+
+    await page.getByTestId("chat-moderation").click();
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/moderation") &&
+          response.request().method() === "PATCH",
+      ),
+      page.getByTestId("posting-policy").selectOption("admins_only"),
+    ]);
+
+    const tanaka = await openAs(browser, TANAKA.email, MEMBER_PASSWORD);
+    const sato = await openAs(browser, SATO.email, MEMBER_PASSWORD);
+    try {
+      await tanaka.page.goto("/chat");
+      await tanaka.page.getByTestId(`channel-row-${BRANCH}`).getByText(BRANCH).click();
+      await expect(tanaka.page.getByTestId("posting-restricted")).toContainText(
+        "管理者のみ投稿",
+      );
+      await expect(tanaka.page.getByTestId("message-input")).toHaveCount(0);
+
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/moderation") &&
+            response.request().method() === "PATCH",
+        ),
+        page.getByTestId("posting-policy").selectOption("everyone"),
+      ]);
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().includes("/mute") && response.request().method() === "PATCH",
+        ),
+        page.getByTestId(`mute-${TANAKA.name}`).click(),
+      ]);
+
+      await tanaka.page.reload();
+      await expect(tanaka.page.getByTestId("posting-restricted")).toContainText(
+        "発言が停止",
+      );
+      await expect(tanaka.page.getByTestId("message-input")).toHaveCount(0);
+
+      await sato.page.goto("/chat");
+      await sato.page.getByTestId(`channel-row-${BRANCH}`).getByText(BRANCH).click();
+      await expect(sato.page.getByTestId("message-input")).toBeVisible();
+    } finally {
+      await tanaka.context.close();
+      await sato.context.close();
+    }
   });
 });

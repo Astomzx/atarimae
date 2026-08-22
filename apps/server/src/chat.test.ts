@@ -204,6 +204,65 @@ describe("channels", () => {
   });
 });
 
+describe("group moderation", () => {
+  it("enforces administrators-only posting on the server", async () => {
+    const tanakaId = await createMember("tanaka@example.test", "田中");
+    const tanaka = await signIn("tanaka@example.test");
+    const channelId = await createChannel(ownerCookie, "全社連絡", "private", [tanakaId]);
+
+    const changed = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/channels/${channelId}/moderation`,
+      headers: as(ownerCookie),
+      payload: { postingPolicy: "admins_only" },
+    });
+    expect(changed.statusCode).toBe(200);
+    expect((await send(tanaka, channelId, "送れてはいけない")).json()).toMatchObject({
+      code: "CHANNEL_ADMINS_ONLY",
+    });
+    expect((await send(ownerCookie, channelId, "管理者からのお知らせ")).statusCode).toBe(
+      201,
+    );
+  });
+
+  it("mutes one member without muting the rest of the group", async () => {
+    const tanakaId = await createMember("tanaka@example.test", "田中");
+    const satoId = await createMember("sato@example.test", "佐藤");
+    const tanaka = await signIn("tanaka@example.test");
+    const sato = await signIn("sato@example.test");
+    const channelId = await createChannel(ownerCookie, "改善会議", "private", [
+      tanakaId,
+      satoId,
+    ]);
+
+    const muted = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/channels/${channelId}/members/${tanakaId}/mute`,
+      headers: as(ownerCookie),
+      payload: { muted: true },
+    });
+    expect(muted.statusCode).toBe(200);
+    expect((await send(tanaka, channelId, "停止中")).json()).toMatchObject({
+      code: "CHANNEL_MEMBER_MUTED",
+    });
+    expect((await send(sato, channelId, "発言できます")).statusCode).toBe(201);
+  });
+
+  it("does not let an ordinary member change group moderation", async () => {
+    const tanakaId = await createMember("tanaka@example.test", "田中");
+    const tanaka = await signIn("tanaka@example.test");
+    const channelId = await createChannel(ownerCookie, "営業", "private", [tanakaId]);
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/channels/${channelId}/moderation`,
+      headers: as(tanaka),
+      payload: { postingPolicy: "admins_only" },
+    });
+    expect(response.statusCode).toBe(403);
+  });
+});
+
 describe("direct conversations", () => {
   /**
    * Two people must never end up with two conversations, each holding half

@@ -33,8 +33,10 @@ export function ChatPage() {
   });
 
   const items = channels.data?.items ?? [];
-  const mine = items.filter((channel) => channel.isMember);
-  const discoverable = items.filter((channel) => !channel.isMember);
+  const mine = items.filter((channel) => channel.isMember || channel.canModerate);
+  const discoverable = items.filter(
+    (channel) => !channel.isMember && !channel.canModerate,
+  );
 
   return (
     <div className="page">

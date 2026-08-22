@@ -14,7 +14,8 @@ account and the same features.
 - **Announcements** — send a shared notice and each person's assignment together
 - **Acknowledgements** — record what each person read and count only obligations that remain active
 - **Organisation** — manage units, members, administrators, permissions and device sessions
-- **Chat and calls** — channels, direct conversations, attachments, mentions and network calls
+- **Chat and calls** — automatic unit groups, direct conversations, images, files, mentions and calls
+- **Group moderation** — administrators-only posting and per-member muting
 - **Phone and PC** — PWA installation, Web Push, offline reading and a Windows app
 - **Integrations** — OpenAPI 3.1, service accounts and signed webhooks
 - **Operations** — audit logs, CSV, and verified backup and restore including attachments
@@ -73,6 +74,19 @@ member at desktop and phone widths.
 ![Owners, administrators and members assigned to 第一営業所](docs/screenshots/members-desktop.png)
 
 ## Start using it
+
+### Windows (recommended)
+
+Extract the ZIP and double-click **`install-windows.cmd`** in its root. The
+Japanese wizard checks or installs Docker Desktop, generates encryption keys,
+starts the database and app, configures HTTPS, and verifies the result. Running
+it again preserves existing settings and keys.
+
+- “Try on this PC only” opens `localhost` without further configuration.
+- “Use in the company” asks for one domain name. DNS and the router's 80/443
+  forwarding are external settings, so the wizard shows those two checks clearly.
+
+### Building the server manually
 
 You need Docker Compose and a reverse proxy that terminates TLS.
 

@@ -27,6 +27,7 @@ const OWNER = {
 
 const PDF = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a]);
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
+const HEIC = Buffer.from("0000001866747970686569630000000068656963", "hex");
 const EXECUTABLE = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
 
 beforeAll(async () => {
@@ -164,6 +165,25 @@ describe("uploading", () => {
     expect((await upload(ownerCookie, channelId, "現場.png", PNG)).json()).toMatchObject({
       inline: true,
     });
+  });
+
+  it("accepts an iPhone HEIC photo as a verified downloadable image", async () => {
+    const channelId = await createChannel(ownerCookie, "営業");
+
+    const response = await upload(ownerCookie, channelId, "現場写真.heic", HEIC);
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      contentType: "image/heic",
+      inline: false,
+    });
+  });
+
+  it("refuses a renamed file that only claims to be HEIC", async () => {
+    const channelId = await createChannel(ownerCookie, "営業");
+
+    const response = await upload(ownerCookie, channelId, "偽物.heic", EXECUTABLE);
+    expect(response.statusCode).toBe(422);
+    expect(response.json().code).toBe("ATTACHMENT_CONTENT_MISMATCH");
   });
 
   /**

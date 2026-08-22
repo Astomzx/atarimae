@@ -142,6 +142,67 @@ describe("organisation units", () => {
 });
 
 describe("membership", () => {
+  it("keeps the department chat membership identical to the unit", async () => {
+    const unitId = (await createUnit("営業部")).json().id as string;
+    const userId = await createMember("tanaka@example.test", "田中");
+
+    const { rows: channels } = await app.db.query<{ id: string }>(
+      "SELECT id FROM channels WHERE org_unit_id = $1",
+      [unitId],
+    );
+    expect(channels).toHaveLength(1);
+
+    await assign(userId, unitId);
+    const { rows: joined } = await app.db.query<{ user_id: string }>(
+      `SELECT user_id FROM channel_members
+        WHERE channel_id = $1 AND user_id = $2 AND left_at IS NULL`,
+      [channels[0]!.id, userId],
+    );
+    expect(joined).toHaveLength(1);
+
+    await app.inject({
+      method: "DELETE",
+      url: `/api/v1/users/${userId}/org-units/${unitId}`,
+      headers: { cookie: ownerCookie },
+    });
+    const { rows: left } = await app.db.query<{ left_at: string | null }>(
+      `SELECT left_at FROM channel_members
+        WHERE channel_id = $1 AND user_id = $2 ORDER BY joined_at DESC LIMIT 1`,
+      [channels[0]!.id, userId],
+    );
+    expect(left[0]?.left_at).not.toBeNull();
+  });
+
+  it("archives and restores the same department chat with its history", async () => {
+    const unitId = (await createUnit("総務部")).json().id as string;
+    const { rows: before } = await app.db.query<{ id: string }>(
+      "SELECT id FROM channels WHERE org_unit_id = $1",
+      [unitId],
+    );
+
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/org-units/${unitId}/disable`,
+      headers: { cookie: ownerCookie },
+    });
+    const { rows: disabled } = await app.db.query<{ archived_at: string | null }>(
+      "SELECT archived_at FROM channels WHERE id = $1",
+      [before[0]!.id],
+    );
+    expect(disabled[0]?.archived_at).not.toBeNull();
+
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/org-units/${unitId}/restore`,
+      headers: { cookie: ownerCookie },
+    });
+    const { rows: restored } = await app.db.query<{
+      id: string;
+      archived_at: string | null;
+    }>("SELECT id, archived_at FROM channels WHERE org_unit_id = $1", [unitId]);
+    expect(restored).toEqual([{ id: before[0]!.id, archived_at: null }]);
+  });
+
   it("adds a member and counts them", async () => {
     const unitId = (await createUnit("第一営業所")).json().id as string;
     const userId = await createMember("tanaka@example.test", "田中");

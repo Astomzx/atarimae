@@ -16,6 +16,10 @@ export interface ChannelAccess {
   channelId: string;
   kind: "public" | "private" | "direct" | "group";
   isMember: boolean;
+  isAdmin: boolean;
+  orgUnitId: string | null;
+  postingPolicy: "everyone" | "admins_only";
+  muted: boolean;
   archived: boolean;
 }
 
@@ -28,14 +32,26 @@ export async function loadChannelAccess(
     kind: ChannelAccess["kind"];
     archived_at: string | null;
     is_member: boolean;
+    is_admin: boolean;
+    org_unit_id: string | null;
+    posting_policy: ChannelAccess["postingPolicy"];
+    muted: boolean;
   }>(
     `SELECT c.kind,
             c.archived_at,
+            c.org_unit_id,
+            c.posting_policy,
+            (u.role IN ('owner', 'admin')) AS is_admin,
             EXISTS (
               SELECT 1 FROM channel_members m
                WHERE m.channel_id = c.id AND m.user_id = $2 AND m.left_at IS NULL
-            ) AS is_member
+            ) AS is_member,
+            COALESCE((
+              SELECT m.muted_by_admin FROM channel_members m
+               WHERE m.channel_id = c.id AND m.user_id = $2 AND m.left_at IS NULL
+            ), false) AS muted
        FROM channels c
+       JOIN users u ON u.id = $2
       WHERE c.id = $1`,
     [channelId, userId],
   );
@@ -47,6 +63,10 @@ export async function loadChannelAccess(
     channelId,
     kind: row.kind,
     isMember: row.is_member,
+    isAdmin: row.is_admin,
+    orgUnitId: row.org_unit_id,
+    postingPolicy: row.posting_policy,
+    muted: row.muted,
     archived: row.archived_at !== null,
   };
 }
@@ -60,7 +80,12 @@ export async function loadChannelAccess(
  * from a 403.
  */
 export function assertCanRead(access: ChannelAccess): void {
-  if (access.kind === "public" || access.isMember) return;
+  if (
+    access.kind === "public" ||
+    access.isMember ||
+    (access.orgUnitId !== null && access.isAdmin)
+  )
+    return;
   throw ApiError.notFound("Channel not found.");
 }
 
@@ -68,7 +93,9 @@ export function assertCanRead(access: ChannelAccess): void {
 export function assertCanPost(access: ChannelAccess): void {
   assertCanRead(access);
 
-  if (!access.isMember) {
+  const managesDepartment = access.orgUnitId !== null && access.isAdmin;
+
+  if (!access.isMember && !managesDepartment) {
     throw new ApiError(
       403,
       ChatErrorCode.CHANNEL_FORBIDDEN,
@@ -80,6 +107,21 @@ export function assertCanPost(access: ChannelAccess): void {
       422,
       ChatErrorCode.CHANNEL_ARCHIVED,
       "This channel has been archived.",
+    );
+  }
+  if (access.isAdmin) return;
+  if (access.postingPolicy === "admins_only") {
+    throw new ApiError(
+      403,
+      ChatErrorCode.CHANNEL_ADMINS_ONLY,
+      "Only administrators may post in this channel.",
+    );
+  }
+  if (access.muted) {
+    throw new ApiError(
+      403,
+      ChatErrorCode.CHANNEL_MEMBER_MUTED,
+      "This member has been muted in the channel.",
     );
   }
 }

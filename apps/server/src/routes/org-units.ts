@@ -104,6 +104,14 @@ export const orgUnitRoutes: FastifyPluginAsyncTypebox = async (app) => {
 
         const id = rows[0]!.id;
 
+        // One unit, one durable room. Its visible name and description are
+        // joined from org_units, so later edits cannot leave the chat stale.
+        await client.query(
+          `INSERT INTO channels (kind, created_by, org_unit_id)
+           VALUES ('private', $1, $2)`,
+          [actor.id, id],
+        );
+
         await writeAudit(client, request, {
           action: AuditAction.ORG_UNIT_CREATED,
           actorUserId: actor.id,

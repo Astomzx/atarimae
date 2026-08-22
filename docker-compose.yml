@@ -86,8 +86,19 @@ services:
       # this is the one directory whose whole point is being copied off the
       # machine. Override with BACKUP_DIR.
       - ${BACKUP_DIR:-./backups}:/var/lib/atarimae/backups
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_BIND_ADDRESS:-0.0.0.0}:${APP_PORT:-3000}:3000"
 
 volumes:
   db-data:

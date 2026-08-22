@@ -24,6 +24,12 @@ export type ChannelKind = Static<typeof ChannelKind>;
 export const ChannelName = Type.String({ minLength: 1, maxLength: 80 });
 export const MessageBody = Type.String({ minLength: 1, maxLength: 10_000 });
 
+export const PostingPolicy = Type.Union([
+  Type.Literal("everyone"),
+  Type.Literal("admins_only"),
+]);
+export type PostingPolicy = Static<typeof PostingPolicy>;
+
 export const ChannelSummary = Type.Object(
   {
     id: Uuid,
@@ -40,6 +46,13 @@ export const ChannelSummary = Type.Object(
     lastMessageAt: NullableTimestamp,
     lastMessagePreview: Type.Union([Type.String(), Type.Null()]),
     isMember: Type.Boolean(),
+    /** Set for a channel whose membership follows an organisation unit. */
+    orgUnitId: Type.Union([Uuid, Type.Null()]),
+    postingPolicy: PostingPolicy,
+    /** The server's answer, including role, policy and an individual mute. */
+    canPost: Type.Boolean(),
+    /** Administrative controls are available even when the admin is not in the unit. */
+    canModerate: Type.Boolean(),
     createdAt: Timestamp,
   },
   { $id: "ChannelSummary" },
@@ -174,7 +187,13 @@ export type MarkReadRequest = Static<typeof MarkReadRequest>;
 export const ChannelMember = Type.Object({
   userId: Uuid,
   displayName: Type.String(),
+  role: Type.Union([
+    Type.Literal("owner"),
+    Type.Literal("admin"),
+    Type.Literal("member"),
+  ]),
   joinedAt: Timestamp,
+  muted: Type.Boolean(),
 });
 export type ChannelMember = Static<typeof ChannelMember>;
 
@@ -183,6 +202,22 @@ export const ListChannelMembersResponse = Type.Object(
   { $id: "ListChannelMembersResponse" },
 );
 export type ListChannelMembersResponse = Static<typeof ListChannelMembersResponse>;
+
+export const UpdateChannelModerationRequest = Type.Object(
+  { postingPolicy: PostingPolicy },
+  { $id: "UpdateChannelModerationRequest" },
+);
+export type UpdateChannelModerationRequest = Static<
+  typeof UpdateChannelModerationRequest
+>;
+
+export const UpdateChannelMemberMuteRequest = Type.Object(
+  { muted: Type.Boolean() },
+  { $id: "UpdateChannelMemberMuteRequest" },
+);
+export type UpdateChannelMemberMuteRequest = Static<
+  typeof UpdateChannelMemberMuteRequest
+>;
 
 // ---------------------------------------------------------------------------
 // Realtime
@@ -235,6 +270,9 @@ export const ChatErrorCode = {
   CHANNEL_FORBIDDEN: "CHANNEL_FORBIDDEN",
   CHANNEL_NAME_TAKEN: "CHANNEL_NAME_TAKEN",
   CHANNEL_ARCHIVED: "CHANNEL_ARCHIVED",
+  CHANNEL_ADMINS_ONLY: "CHANNEL_ADMINS_ONLY",
+  CHANNEL_MEMBER_MUTED: "CHANNEL_MEMBER_MUTED",
+  CHANNEL_NOT_MODERATABLE: "CHANNEL_NOT_MODERATABLE",
   /** Direct conversations have a fixed membership. */
   CANNOT_MODIFY_DIRECT: "CANNOT_MODIFY_DIRECT",
   /** Opening a conversation with oneself. */

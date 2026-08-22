@@ -257,6 +257,8 @@ places that already do are listed in `docs/architecture/service-accounts.md`.
   broken.
 - `docs/engineering/chat-interface.md` — what building the chat interface found,
   and the hazards it was written against.
+- `docs/architecture/chat-permissions.md` — department groups, moderation and
+  the exact privacy boundary of member-to-member conversations.
 - `docs/engineering/docker-first-build.md` — three defects the first-ever image
   build found, including one that produced a healthy container with no tables.
 - `docs/architecture/pwa.md` — what is cached and what is refused, and why an

@@ -35,6 +35,7 @@ import type {
   MyAnnouncement,
   OrgUnit,
   PublishResponse,
+  PostingPolicy,
   ReviseContentRequest,
   Role,
   SendMessageRequest,
@@ -343,6 +344,18 @@ export const api = {
     join: (channelId: string) => send<void>("POST", `/channels/${channelId}/join`),
     members: (channelId: string) =>
       request<ListChannelMembersResponse>(`/channels/${channelId}/members`),
+    setPostingPolicy: (channelId: string, postingPolicy: PostingPolicy) =>
+      send<{ postingPolicy: PostingPolicy }>(
+        "PATCH",
+        `/channels/${channelId}/moderation`,
+        { postingPolicy },
+      ),
+    setMemberMuted: (channelId: string, userId: string, muted: boolean) =>
+      send<{ userId: string; muted: boolean }>(
+        "PATCH",
+        `/channels/${channelId}/members/${userId}/mute`,
+        { muted },
+      ),
     messages: (channelId: string, before?: string) => {
       const query = before ? `?before=${before}` : "";
       return request<ListMessagesResponse>(`/channels/${channelId}/messages${query}`);
@@ -465,6 +478,9 @@ const MESSAGES: Record<string, string> = {
   CHANNEL_FORBIDDEN: "このチャンネルに参加してから投稿してください。",
   CHANNEL_NAME_TAKEN: "同じ名前のチャンネルが既に存在します。",
   CHANNEL_ARCHIVED: "このチャンネルはアーカイブ済みのため投稿できません。",
+  CHANNEL_ADMINS_ONLY: "このグループは管理者のみ投稿できます。",
+  CHANNEL_MEMBER_MUTED: "このグループでは管理者により発言が停止されています。",
+  CHANNEL_NOT_MODERATABLE: "1対1の会話にはグループの発言制限を設定できません。",
   CANNOT_MODIFY_DIRECT: "1対1の会話のメンバーは変更できません。",
   CANNOT_MESSAGE_SELF: "自分自身との会話は作成できません。",
   REPLY_ACROSS_CHANNELS: "同じチャンネル内のメッセージにのみ返信できます。",
